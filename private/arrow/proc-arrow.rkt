@@ -99,6 +99,7 @@
 (define +/proc (lower/proc +/bot))
 (define -/proc (lower/proc -/bot))
 
+(define zero?/proc (lower/proc zero?/bot))
 (define negative?/proc (lower/proc negative?/bot))
 (define positive?/proc (lower/proc positive?/bot))
 (define nonpositive?/proc (lower/proc nonpositive?/bot))

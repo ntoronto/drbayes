@@ -23,7 +23,7 @@
           [else  (fail v)])))
 
 (: const (case-> (Any -> Value)
-                 (Any Any -> Value)))
+                 (Any Syntax -> Value)))
 (define (const orig-v [stx #f])
   (any->value
    orig-v
@@ -34,7 +34,7 @@
              [else  (format "illegal constant ~e in ~e" v orig-v)]))
      (cond [stx   (raise (exn:fail:syntax (string-append "drbayes: " msg)
                                           (current-continuation-marks)
-                                          (list (assert stx syntax?))))]
+                                          (list stx)))]
            [else  (error 'drbayes msg)]))))
 
 (: syntax-const ((Syntaxof Any) -> Value))

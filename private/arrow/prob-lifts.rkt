@@ -156,6 +156,10 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; Real predicates
 
+(define zero?/bot* (η/bot* zero?/bot))
+(define zero?/pre* (η/pre* zero?/pre))
+(define zero?/idx any/idx)
+
 (define negative?/bot* (η/bot* negative?/bot))
 (define negative?/pre* (η/pre* negative?/pre))
 (define negative?/idx any/idx)

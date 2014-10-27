@@ -9,7 +9,8 @@
          "preimage-mapping.rkt"
          "directed-rounding-flops.rkt")
 
-(provide (all-defined-out))
+(provide (except-out (all-defined-out)
+                     flneg flsqr flrecip))
 
 ;; ===================================================================================================
 ;; R -> R lifts
@@ -649,6 +650,16 @@
    (bot-basic At)
    (bot-basic Af)))
 
+(define nonzero-reals
+  (real-set-union (Nonextremal-Interval -inf.0 0.0 #f #f)
+                  (Nonextremal-Interval 0.0 +inf.0 #f #f)))
+
+(define-values (zero?/bot zero?/pre)
+  (real-predicate/prim 'zero?
+                       (λ: ([x : Flonum]) (fl= x 0.0))
+                       zero-interval
+                       nonzero-reals))
+
 (define-values (negative?/bot negative?/pre)
   (real-predicate/prim 'negative?
                        (λ: ([x : Flonum]) (x . fl< . 0.0))
@@ -685,10 +696,6 @@
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Nonmonotone functions
-
-(define nonzero-reals
-  (real-set-union (Nonextremal-Interval -inf.0 0.0 #f #f)
-                  (Nonextremal-Interval 0.0 +inf.0 #f #f)))
 
 ;; Absolute value
 (define abs/bot (real/bot 'abs reals nonnegative-interval flabs))

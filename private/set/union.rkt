@@ -238,13 +238,13 @@
 (struct: Bot-Union Base-Bot-Set ([hash : Bot-Union-Hash])
   #:transparent
   #:property prop:custom-print-quotable 'never
-  ;#:property prop:custom-write print-bot-union
+  #:property prop:custom-write print-bot-union
   )
 
 (struct: Top-Union Base-Top-Set ([hash : Top-Union-Hash])
   #:transparent
   #:property prop:custom-print-quotable 'never
-  ;#:property prop:custom-write print-top-union
+  #:property prop:custom-write print-top-union
   )
 
 (define-syntax bot-union? (make-rename-transformer #'Bot-Union?))

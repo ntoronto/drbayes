@@ -30,7 +30,7 @@
          car cdr real? null? pair? boolean?
          exp log abs sqr sqrt acos asin
          floor ceiling
-         negative? positive? nonnegative? nonpositive?
+         zero? negative? positive? nonnegative? nonpositive?
          partial-cos partial-sin
          cons + * - / < <= > >=
          list uniform normal cauchy
@@ -105,7 +105,7 @@
     #:literals (+ - * /
                   car cdr real? null? pair? boolean?
                   exp log abs sqr sqrt acos asin floor ceiling round truncate
-                  negative? positive? nonnegative? nonpositive?
+                  zero? negative? positive? nonnegative? nonpositive?
                   partial-cos partial-sin)
     (pattern + #:attr computation #'(restrict/arr reals))
     (pattern - #:attr computation #'neg/arr)
@@ -128,6 +128,7 @@
     (pattern ceiling #:attr computation #'ceiling/arr)
     (pattern round #:attr computation #'round/arr)
     (pattern truncate #:attr computation #'truncate/arr)
+    (pattern zero? #:attr computation #'zero?/arr)
     (pattern negative? #:attr computation #'negative?/arr)
     (pattern positive? #:attr computation #'positive?/arr)
     (pattern nonnegative? #:attr computation #'nonnegative?/arr)
@@ -449,17 +450,24 @@
 (define-syntax (struct/drbayes stx)
   (syntax-case stx ()
     [(_ name (fields ...))
-     (with-syntax ([name-tag  (format-id #'name "~a-tag" #'name)]
-                   [name?     (format-id #'name "~a?" #'name)]
-                   [(name-field ...)  (map (λ (field) (format-id #'name "~a-~a" #'name field))
-                                           (syntax->list #'(fields ...)))]
-                   [(index ...)       (build-list (length (syntax->list #'(fields ...))) values)])
-       (syntax/loc stx
-         (begin (define name-tag (make-set-tag 'name))
-                (define/drbayes (name fields ...)
-                  (tag (list fields ...) name-tag))
-                (define/drbayes (name? x)
-                  (tag? x name-tag))
-                (define/drbayes (name-field x)
-                  (list-ref (untag x name-tag) index))
-                ...)))]))
+     (let ([arity  (length (syntax->list #'(fields ...)))])
+       (with-syntax ([name-tag  (format-id #'name "~a-tag" #'name)]
+                     [name?     (format-id #'name "~a?" #'name)]
+                     [(name-field ...)  (map (λ (field) (format-id #'name "~a-~a" #'name field))
+                                             (syntax->list #'(fields ...)))]
+                     [(index ...)       (build-list arity values)]
+                     [name-set    (format-id #'name "~a-set" #'name)]
+                     [(Sets ...)  (build-list arity (λ (_) #'Set))])
+         (syntax/loc stx
+           (begin (define name-tag (make-set-tag 'name))
+                  (define/drbayes (name fields ...)
+                    (tag (list fields ...) name-tag))
+                  (define/drbayes (name? x)
+                    (tag? x name-tag))
+                  (define/drbayes (name-field x)
+                    (list-ref (untag x name-tag) index))
+                  ...
+                  (: name-set (Sets ... -> Set))
+                  (define (name-set fields ...)
+                    (set-tag (set-list fields ...) name-tag))
+                  ))))]))

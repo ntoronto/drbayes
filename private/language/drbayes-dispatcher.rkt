@@ -50,7 +50,7 @@
 (define-drbayes-arrow-comps floor ceiling round truncate)
 (define-drbayes-arrow-comps cauchy normal)
 (define-drbayes-arrow-comps + -)
-(define-drbayes-arrow-comps negative? positive? nonpositive? nonnegative?)
+(define-drbayes-arrow-comps zero? negative? positive? nonpositive? nonnegative?)
 (define-drbayes-arrow-comps < > <= >=)
 (define-drbayes-arrow-comps abs sqr recip)
 (define-drbayes-arrow-comps * /)

@@ -389,7 +389,7 @@
                              (printf "b = bottom: ~a~n" (force (bottom-message b)))
                              (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)]
                             [else
-                             (printf "b not in B~n")
+                             (printf "~v not in B~n" b)
                              (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)])]
                      [_
                       (printf "refinement-sample-point returned #f~n")
