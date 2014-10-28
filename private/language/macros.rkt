@@ -14,7 +14,7 @@
                        racket/base
                        racket/list
                        racket/math)
-         (only-in typed/racket/base : assert -> case-> Any)
+         (only-in typed/racket/base : assert -> case-> Any Promise)
          racket/stxparam
          (for-syntax (only-in "functions.rkt" syntax-const))
          "functions.rkt"
@@ -207,25 +207,23 @@
   (case-lambda
     [(old-d)
      (bound-local-identifier
-      (λ (inner-stx)
+      (λ (stx)
         (cond [(current-dispatcher-id #'drbayes-dispatcher)
                (define d (syntax-parameter-value #'let-depth))
-               (define i (quasisyntax/loc inner-stx (ref/arr #,(- d old-d))))
-               (syntax-case inner-stx () [(_ . args)  #`(#,i . args)] [_  i])]
+               (define i (quasisyntax/loc stx (ref/arr #,(- d old-d))))
+               (syntax-case stx () [(_ . args)  #`(#,i . args)] [_  i])]
               [else
-               (raise-syntax-error 'drbayes "reference to DrBayes binding in Racket code"
-                                   inner-stx)])))]
+               (raise-syntax-error 'drbayes "reference to DrBayes binding in Racket code" stx)])))]
     [(old-d idx)
      (bound-local-identifier
-      (λ (inner-stx)
+      (λ (stx)
         (cond [(current-dispatcher-id #'drbayes-dispatcher)
                (define d (syntax-parameter-value #'let-depth))
-               (define i (quasisyntax/loc inner-stx
+               (define i (quasisyntax/loc stx
                            ((ref/arr #,(- d old-d)) . >>>/arr . (ref/arr #,idx))))
-               (syntax-case inner-stx () [(_ . args)  #`(#,i . args)] [_  i])]
+               (syntax-case stx () [(_ . args)  #`(#,i . args)] [_  i])]
               [else
-               (raise-syntax-error 'drbayes "reference to DrBayes binding in Racket code"
-                                   inner-stx)])))]))
+               (raise-syntax-error 'drbayes "reference to DrBayes binding in Racket code" stx)])))]))
 
 ;; A `let' is transformed (partly) into a `let-syntax' with the result of calling this function as
 ;; its value
@@ -404,28 +402,27 @@
 
 (define-for-syntax (make-first-order-function name-body name-racket arity)
   (first-order-function
-   (λ (inner-stx)
+   (λ (stx)
      (define id (current-dispatcher-id #'drbayes-dispatcher))
      (if (identifier? id)
-         (syntax-case inner-stx ()
+         (syntax-case stx ()
            [(_ arg ...)
             (= arity (length (syntax->list #'(arg ...))))
-            (quasisyntax/loc inner-stx
+            (quasisyntax/loc stx
               (apply/arr (meaning-arr #,name-body) (list (interp arg) ...)))]
-           [(_ . _)  (raise-syntax-arity-error 'drbayes arity inner-stx)]
-           [_        (raise-syntax-error 'drbayes "expected application" inner-stx)])
-         (syntax-case inner-stx ()
+           [(_ . _)  (raise-syntax-arity-error 'drbayes arity stx)]
+           [_        (raise-syntax-error 'drbayes "expected application" stx)])
+         (syntax-case stx ()
            [(_ arg ...)
             (= arity (length (syntax->list #'(arg ...))))
-            (quasisyntax/loc inner-stx (#,name-racket arg ...))]
-           [(_ . _)  (raise-syntax-arity-error 'drbayes arity inner-stx)]
-           [_        (quasisyntax/loc inner-stx #,name-racket)])))))
+            (quasisyntax/loc stx (#,name-racket arg ...))]
+           [(_ . _)  (raise-syntax-arity-error 'drbayes arity stx)]
+           [_        (quasisyntax/loc stx #,name-racket)])))))
 
 (define-syntax (define/drbayes stx)
   (syntax-parse stx
-    [(_ name:id body:expr)
-     (syntax/loc stx
-       (define name (drbayes body)))]
+    [(_ name:id body ...)
+     (raise-syntax-error 'drbayes "cannot define probabilistic constants" stx)]
     [(_ (name:id arg:id ...) body:expr)
      (define arity (length (syntax->list #'(arg ...))))
      (define/with-syntax (value ...) (build-list arity (λ (i) (make-binding-transformer stx 1 i))))
@@ -445,7 +442,9 @@
            ((apply/proc (meaning-proc name-body) (list (const/proc (const arg)) ...)) null))
          
          (define-syntax name
-           (make-first-order-function #'name-body #'name-racket #,arity))))]))
+           (make-first-order-function #'name-body #'name-racket #,arity))))]
+    [(_ (name:id arg:id ...) body ...)
+     (raise-syntax-error 'drbayes "functions may have only one body expression" stx)]))
 
 (define-syntax (struct/drbayes stx)
   (syntax-case stx ()

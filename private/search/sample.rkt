@@ -326,22 +326,19 @@
 ;; ===================================================================================================
 ;; Front end to sampler
 
-(: drbayes-sample (case-> (meaning Natural -> (Values (Listof Value) (Listof Flonum)))
-                          (meaning Natural Set -> (Values (Listof Value) (Listof Flonum)))))
-(define (drbayes-sample e n [B universe])
+(: drbayes-sample (meaning Natural -> (Values (Listof Value) (Listof Flonum))))
+(define (drbayes-sample e n)
   (define-values (f h idxs)
     (match-let ([(meaning _ f h k)  e])
       (values (run/bot* f '()) (run/pre* h '()) (k '()))))
   
-  (define (empty-set-error)
-    (error 'drbayes-sample "cannot sample from the empty set"))
-  
-  (define refine
-    (if (empty-set? B) (empty-set-error) (preimage-refiner h B)))
+  (define refine (preimage-refiner h universe))
   
   (define S
     (let ([S  (refine (cons omegas traces))])
-      (if (empty-set? S) (empty-set-error) S)))
+      (if (empty-set? S)
+          (error 'drbayes-sample "cannot sample from the empty set")
+          S)))
   
   (define t (build-search-tree S (annotate-indexes idxs) refine))
   
@@ -370,7 +367,7 @@
                 (match-define (search-leaf S m) leaf-t)
                 (cond
                   [(or (empty-set? S) (m . <= . 0.0))
-                   (printf "sample-search-tree returned failure~n")
+                   ;(printf "sample-search-tree returned failure~n")
                    (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)]
                   [else
                    (define pt (refinement-sample-point S idxs refine))
@@ -381,20 +378,17 @@
                    (match pt
                      [(store-sample s m)
                       (define b (f (cons s null)))
-                      (cond [(and (not (bottom? b)) (set-member? B b))
-                             ;(printf "success!~n")
-                             (inner-loop (rest leaf-ts) (rest leaf-ps)
-                                         (cons b bs) (cons (/ m leaf-p) ws))]
-                            [(bottom? b)
-                             (printf "b = bottom: ~a~n" (force (bottom-message b)))
+                      (cond [(bottom? b)
+                             ;(printf "b = bottom: ~a~n" (force (bottom-message b)))
                              (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)]
                             [else
-                             (printf "~v not in B~n" b)
-                             (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)])]
+                             ;(printf "success!~n")
+                             (inner-loop (rest leaf-ts) (rest leaf-ps)
+                                         (cons b bs) (cons (/ m leaf-p) ws))])]
                      [_
-                      (printf "refinement-sample-point returned #f~n")
+                      ;(printf "refinement-sample-point returned #f~n")
                       (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)])])]))))]
       [else
        (when (q . <= . 0.0)
-         (printf "bailing because top probability is zero~n"))
+         (error 'drbayes-sample "cannot sample from a zero-probability set"))
        (values bs ws)])))
