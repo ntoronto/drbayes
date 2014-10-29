@@ -1,6 +1,6 @@
 #lang typed/racket/base
 
-(require "../private/set/bool-set.rkt")
+(require "../../private/set/bool-set.rkt")
 
 (provide (all-defined-out))
 

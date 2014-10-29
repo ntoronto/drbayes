@@ -4,13 +4,14 @@
          math/distributions
          math/statistics
          math/flonum
-         "../main.rkt"
-         "gamma-beta.rkt"
-         "test-utils.rkt")
+         "../../main.rkt"
+         "../test-utils.rkt"
+         "gamma-beta.rkt")
 
 (printf "starting...~n")
 
 (interval-max-splits 4)
+(define n 5000)
 
 ;; Priors
 (define/drbayes (standard-program) (beta 30 2))
@@ -22,41 +23,41 @@
       (< (random) P)
       (> (random) P)))
 
-(define/drbayes model
+(define/drbayes (model)
   (let ([P0  (standard-program)]
         [P1  (submitted-program)]
         [P2  (submitted-program)]
         [T0  (submitted-test)]
         [T1  (submitted-test)])
-    (list (list P0 P1 P2)
-          (list T0 T1)
-          (list (list (test-result #t P0)
-                      (test-result #t P0)
-                      (test-result T0 P0)
-                      (test-result T1 P0))
-                (list (test-result #t P1)
-                      (test-result #t P1)
-                      (test-result T0 P1)
-                      (test-result T1 P1))
-                (list (test-result #t P2)
-                      (test-result #t P2)
-                      (test-result T0 P2)
-                      (test-result T1 P2))))))
+    (let ([Ps  (list P0 P1 P2)]
+          [Ts  (list T0 T1)]
+          [Rs  (list (list (test-result #t P0)
+                           (test-result #t P0)
+                           (test-result T0 P0)
+                           (test-result T1 P0))
+                     (list (test-result #t P1)
+                           (test-result #t P1)
+                           (test-result T0 P1)
+                           (test-result T1 P1))
+                     (list (test-result #t P2)
+                           (test-result #t P2)
+                           (test-result T0 P2)
+                           (test-result T1 P2)))])
+      (strict-if
+       (equal? (list (list #t #t #t #f)
+                     (list #t #t #t #t)
+                     (list #t #t #t #t))
+               Rs)
+       (list Ps Ts Rs)
+       (fail)))))
 
 (define-type Test-Sample
   (List (Listof Real)
         (Listof Boolean)
         (Listof (Listof Boolean))))
 
-(define condition-set
-  (set-list universe
-            universe
-            (set-list (set-list trues trues trues falses)
-                      (set-list trues trues trues trues)
-                      (set-list trues trues trues trues))))
-
 (define-values (ss ws)
-  (let-values ([(ss ws)  (drbayes-sample model 5000 condition-set)])
+  (let-values ([(ss ws)  (drbayes-sample (drbayes (model)) n)])
     (values (cast ss (Listof Test-Sample))
             ws)))
 

@@ -1,18 +1,12 @@
 #lang typed/racket
 
-(require typed/rackunit)
+(require typed/rackunit
+         "../test-utils.rkt")
 
 (provide (all-defined-out))
 
-(define-syntax-rule (implies a b) (or (not a) b))
-
 (: flip (All (A B C) ((A B -> C) -> (B A -> C))))
 (define ((flip f) x y) (f y x))
-
-;; Using this is about 1000x faster than using `check-true' directly, mostly because it doesn't have
-;; to construct the message unless there's a failure
-(define-syntax-rule (check-prop expr msg)
-  (if expr (void) (check-true expr msg)))
 
 ;; ===================================================================================================
 ;; Bounded lattice property checks

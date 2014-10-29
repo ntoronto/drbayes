@@ -1,8 +1,8 @@
 #lang typed/racket
 
-(require "../private/set/bool-set.rkt"
-         "rackunit-utils.rkt"
-         "random-bool-set.rkt")
+(require "../../private/set/bool-set.rkt"
+         "../random-sets/random-bool-set.rkt"
+         "set-properties.rkt")
 
 (printf "starting...~n")
 

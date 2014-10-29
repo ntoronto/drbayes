@@ -1,10 +1,10 @@
 #lang typed/racket
 
-(require "../private/arrow.rkt"
-         "../private/set.rkt"
-         (rename-in "random-real-set.rkt" [random-real :random-real])
-         "random-bool-set.rkt"
-         "rackunit-utils.rkt")
+(require "../../private/arrow.rkt"
+         "../../private/set.rkt"
+         "../random-sets/random-real-set.rkt"
+         "../random-sets/random-bool-set.rkt"
+         "../test-utils.rkt")
 
 (: random-nonempty-real-set (-> Nonempty-Real-Set))
 (define (random-nonempty-real-set)
@@ -21,14 +21,14 @@
   (define A (random-bool-set))
   (if (empty-bool-set? A) (random-nonempty-bool-set) A))
 
-(: random-real (Set -> Flonum))
-(define (random-real A)
-  (:random-real (set-take-reals A)))
+(: random-real* (Set -> Flonum))
+(define (random-real* A)
+  (random-real (set-take-reals A)))
 
 (: random-real-pair (Set -> (Pair Flonum Flonum)))
 (define (random-real-pair A)
-  (cons (random-real (set-proj-fst A))
-        (random-real (set-proj-snd A))))
+  (cons (random-real* (set-proj-fst A))
+        (random-real* (set-proj-snd A))))
 
 (: test-soundness (Symbol Bot-Arrow Pre-Arrow
                           (-> Nonempty-Set)
@@ -60,11 +60,11 @@
 
 (: test-unary-op (Symbol Bot-Arrow Pre-Arrow Integer -> Void))
 (define (test-unary-op name f h n)
-  (test-soundness name f h random-nonempty-real-set random-nonempty-real-set random-real n))
+  (test-soundness name f h random-nonempty-real-set random-nonempty-real-set random-real* n))
 
 (: test-unary-pred (Symbol Bot-Arrow Pre-Arrow Integer -> Void))
 (define (test-unary-pred name f h n)
-  (test-soundness name f h random-nonempty-real-set random-nonempty-bool-set random-real n))
+  (test-soundness name f h random-nonempty-real-set random-nonempty-bool-set random-real* n))
 
 (: test-binary-op (Symbol Bot-Arrow Pre-Arrow Integer -> Void))
 (define (test-binary-op name f h n)

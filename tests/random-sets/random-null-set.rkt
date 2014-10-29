@@ -1,6 +1,6 @@
 #lang typed/racket/base
 
-(require "../private/set/null-set.rkt")
+(require "../../private/set/null-set.rkt")
 
 (provide (all-defined-out))
 

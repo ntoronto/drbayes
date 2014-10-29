@@ -1,8 +1,8 @@
 #lang typed/racket
 
-(require "../private/set/real-set.rkt"
-         "rackunit-utils.rkt"
-         "random-real-set.rkt")
+(require "../../private/set/real-set.rkt"
+         "../random-sets/random-real-set.rkt"
+         "set-properties.rkt")
 
 (printf "starting...~n")
 

@@ -4,12 +4,10 @@
          math/distributions
          math/statistics
          math/flonum
-         "../main.rkt"
-         "test-utils.rkt")
+         "../../main.rkt"
+         "../test-utils.rkt")
 
 (printf "starting...~n")
-
-
 
 (interval-max-splits 0)
 
@@ -40,10 +38,17 @@
       (define sws
         (time
          (let-values ([(ss ws)
-                       (drbayes-sample (drbayes (S))
-                                       2000
-                                       (set-list* bools trues falses trues falses trues falses
-                                                  universe))])
+                       (drbayes-sample (drbayes
+                                        (let ([s  (S)])
+                                          (strict-if (and (list-ref s 1)
+                                                          (not (list-ref s 2))
+                                                          (list-ref s 3)
+                                                          (not (list-ref s 4))
+                                                          (list-ref s 5)
+                                                          (not (list-ref s 6)))
+                                                     s
+                                                     (fail))))
+                                       2000)])
            (map (inst cons Value Flonum) ss ws))))
       (values (map (inst car Value Flonum) sws)
               (map (inst cdr Value Flonum) sws))))

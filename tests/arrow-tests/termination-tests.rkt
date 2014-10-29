@@ -1,23 +1,23 @@
 #lang typed/racket
 
 (require typed/rackunit
-         "../private/arrow.rkt"
-         "../private/set.rkt")
+         "../../private/arrow.rkt"
+         "../../private/set.rkt")
 
 ;; ===================================================================================================
 ;; Bottom and bottom* arrows
 
 (: halt-on-true/bot Bot-Arrow)
 (define halt-on-true/bot
-  (ifte/bot id/bot id/bot (lazy/bot (λ () halt-on-true/bot))))
+  (ifte/bot id/bot id/bot (lazy/bot (delay halt-on-true/bot))))
 
 (: halt-on-true/bot* Bot*-Arrow)
 (define halt-on-true/bot*
-  (ifte/bot* id/bot* id/bot* (lazy/bot* (λ () halt-on-true/bot*))))
+  (ifte/bot* id/bot* id/bot* (lazy/bot* (delay halt-on-true/bot*))))
 
 (: halt-on-true*/bot* Bot*-Arrow)
 (define halt-on-true*/bot*
-  (ifte*/bot* id/bot* id/bot* (lazy/bot* (λ () halt-on-true*/bot*))))
+  (ifte*/bot* id/bot* id/bot* (lazy/bot* (delay halt-on-true*/bot*))))
 
 (: random-domain-cons (Value -> (Pair (Pair Omega Trace) Value)))
 (define (random-domain-cons a)
@@ -44,15 +44,15 @@
 
 (: halt-on-true/pre Pre-Arrow)
 (define halt-on-true/pre
-  (ifte/pre id/pre id/pre (lazy/pre (λ () halt-on-true/pre))))
+  (ifte/pre id/pre id/pre (lazy/pre (delay halt-on-true/pre))))
 
 (: halt-on-true/pre* Pre*-Arrow)
 (define halt-on-true/pre*
-  (ifte/pre* id/pre* id/pre* (lazy/pre* (λ () halt-on-true/pre*))))
+  (ifte/pre* id/pre* id/pre* (lazy/pre* (delay halt-on-true/pre*))))
 
 (: halt-on-true*/pre* Pre*-Arrow)
 (define halt-on-true*/pre*
-  (ifte*/pre* id/pre* id/pre* (lazy/pre* (λ () halt-on-true*/pre*))))
+  (ifte*/pre* id/pre* id/pre* (lazy/pre* (delay halt-on-true*/pre*))))
 
 (: random-domain-pair (Nonempty-Set -> Nonempty-Set))
 (define (random-domain-pair A)
@@ -81,8 +81,10 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; Tests with unconstrained traces
 
+(drbayes-always-terminate? #t)
+
 ;; Change to #t when Pre*-Arrow combinators are implemented as in Toronto & McCarthy 2014:
-(define paper-preimage*-arrow? #f)
+(define paper-preimage*-arrow? #t)
 ;; Otherwise, leave #f because there are 9 tests below (guarded by a `when') that terminate only
 ;; using that preimage* arrow
 

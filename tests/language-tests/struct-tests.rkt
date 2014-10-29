@@ -3,8 +3,8 @@
 (require plot/typed
          images/flomap
          racket/flonum
-         "../main.rkt"
-         "test-utils.rkt")
+         "../../main.rkt"
+         "../test-utils.rkt")
 
 (printf "starting...~n")
 
@@ -188,27 +188,19 @@
 (define/drbayes (start-p)
   (const p0))
 
-(interval-max-splits 0)
+(interval-max-splits 1)
 ;(interval-min-length (expt 0.5 5.0))
 
-(define n 200)
+(define n 20000)
 
-(define/drbayes e
-  (trace-light (list (start-p)) (uniform-vec)))
-
-(define H
-  ;(set-list reals reals reals)
-  (set-list (real-set 0.49 0.51)
-            (real-set -0.001 0.001)
-            (real-set 0.49 0.51)))
-
-(define B
-  ;universe
-  ;(set-list* H universe universe)
-  (set-list* H
-             universe
-             universe
-             universe))
+(define/drbayes (e)
+  (let* ([ps  (trace-light (list (start-p)) (uniform-vec))]
+         [p   (list-ref ps 0)])
+    (strict-if (and (<= 0.49 (list-ref p 0)) (<= (list-ref p 0) 0.51)
+                    (<= -0.001 (list-ref p 1)) (<= (list-ref p 1) 0.001)
+                    (<= 0.49 (list-ref p 2)) (<= (list-ref p 2) 0.51))
+               ps
+               (fail))))
 
 #|
 (match-define (rand-expression-meaning idxs f-fwd f-comp) (run-rand-expression (->rand f-expr)))
@@ -225,11 +217,17 @@
        ;profile-expr
        #;
        (let ()
-         (define ps (build-list n (λ: ([_ : Index]) (drbayes-run e))))
+         (define ps (build-list n (λ ([i : Index])
+                                    (when (= (modulo (+ i 1) 100) 0)
+                                      (printf "i = ~v~n" (+ i 1)))
+                                    (with-handlers ([exn?  (λ (_) empty)])
+                                      (e)))))
          (define ws (build-list n (λ: ([_ : Index]) 1.0)))
-         (map (inst cons Value Flonum) ps ws))
+         (filter (λ ([pw : (Pair Value Flonum)]) (not (empty? (car pw))))
+                 (map (inst cons Value Flonum) ps ws)))
+       
        (let ()
-         (define-values (ps ws) (drbayes-sample e n B))
+         (define-values (ps ws) (drbayes-sample (drbayes (e)) n))
          (map (inst cons Value Flonum) ps ws))))
     (values (cast (map (inst car Value Flonum) pws)
                   (Listof (Listof (List Flonum Flonum Flonum))))

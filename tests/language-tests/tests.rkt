@@ -9,8 +9,6 @@
          "profile.rkt"
          "normal-normal.rkt")
 
-(plot-font-size 12)
-
 (printf "starting...~n~n")
 
 (error-print-width 1024)
@@ -22,32 +20,30 @@
 (define point-alpha-scale (make-parameter 2))
 
 (interval-max-splits 0)
-(define n 10000)
+(define n 1000)
 
 (define/drbayes (normal/box-muller)
   (* (sqrt (* -2 (log (random))))
      (partial-cos (* (const pi) (uniform -1 1)))))
 
-;(define/drbayes e 3)
-
 #;; Test: constants
 ;; Preimage is unrestricted
 (begin
-  (define e (drbayes #f))
-  (define B falses))
+  (define/drbayes (e) #f)
+  (define/drbayes (g e) (not e)))
 
 #;; Not well-defined (won't expand)
 (begin
   (define/drbayes (bad-loop) (bad-loop))
-  (define/drbayes e (bad-loop))
-  (define B universe))
+  (define/drbayes (e) (bad-loop))
+  (define/drbayes (g e) #t))
 
 #;; Preimage is ∅
 (begin
   (drbayes-always-terminate? #t) 
   (define/drbayes (loop) (if #t (loop) (loop)))
-  (define/drbayes e (loop))
-  (define B universe))
+  (define/drbayes (e) (loop))
+  (define/drbayes (g e) #t))
 
 #;; Always terminates, but doesn't look like it abstractly
 ;; Preimage is Ω
@@ -58,14 +54,14 @@
   (define/drbayes (loop)
     (if #t (loop) (loop)))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let ([x  (random)]
           [y  (random)])
       (if (x . < . y)
           (if (x . >= . y) (loop) 0)
           (if (x . < . y) (loop) 0))))
   
-  (define B universe))
+  (define/drbayes (g e) #t))
 
 #;; Terminates with probability 0.5
 ;; Preimage is [0,0.5] × [0.25,0.75]
@@ -75,10 +71,11 @@
   
   (define/drbayes (loop) (if #t (loop) (loop)))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (if (boolean (const 0.5)) (random) (loop)))
   
-  (define B (real-set 0.25 0.75)))
+  (define/drbayes (g x)
+    (and (< 0.25 x) (< x 0.75))))
 
 #;; Terminates with probability zero
 (begin
@@ -87,12 +84,12 @@
   
   (define/drbayes (loop) (if #t (loop) (loop)))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (if (<= (random) 0) (random) (loop)))
   
-  (define B universe))
+  (define/drbayes (g x) #t))
 
-#;
+#;; Geometric distribution (terminates with probability 1)
 (begin
   (interval-max-splits 0)
   (drbayes-always-terminate? #t)
@@ -100,93 +97,97 @@
   (define/drbayes (geometric p)
     (if (< (random) p) 0 (+ 1 (geometric p))))
   
-  (define/drbayes e (geometric 0.5))
+  (define/drbayes (e) (geometric 0.5))
   
-  (define B universe))
+  (define/drbayes (g x) #t))
 
-#;
+#;; Always terminates with 0 or 1, but abstractly may not terminate
 (begin
   (define/drbayes (badfun x y)
     (if (x . < . y)
         (if (x . >= . y) (badfun x y) 0)
         (if (x . < . y) (badfun x y) 1)))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (badfun (random) (random)))
   
-  (define B universe))
+  (define/drbayes (g x) #t))
 
 #;; Test: random
 ;; Preimage is [0.25,0.5]
 (begin
-  (define e (drbayes (random)))
-  (define B (real-set 0.25 0.5 #t #t)))
+  (define/drbayes (e) (random))
+  (define/drbayes (g x) (and (<= 0.25 x) (<= x 0.5))))
 
 #;; Test: cons
 ;; Preimage is [0.25,0.5] x [0.25,0.5]
 (begin
   (interval-max-splits 1)
-  (define e (drbayes (cons (random) (random))))
-  (define I (real-set 0.25 0.5 #t #t))
-  (define B (set-pair I I)))
-
-#;; Test: improper cons-list
-;; Preimage is [0.25,0.5] x [0.25,0.5] x [0.25,0.5]
-(begin
-  (interval-max-splits 1)
-  (define e (drbayes (cons (random) (cons (random) (random)))))
-  (define I (real-set 0.25 0.5 #t #t))
-  (define B (set-pair I (set-pair I I))))
+  (define/drbayes (e) (cons (random) (random)))
+  (define/drbayes (g x)
+    (and (<= 0.25 (car x)) (<= (car x) 0.5)
+         (<= 0.25 (cdr x)) (<= (cdr x) 0.5))))
 
 #;; Test: lists
 ;; Preimage is [0.25,0.5] x [0.25,0.5] x [0.25,0.5]
 (begin
-  (define e (drbayes (list (random) (random) (random))))
-  (define I (real-set 0.25 0.5 #t #t))
-  (define B (set-list I I I)))
+  (define/drbayes (e) (list (random) (random) (random)))
+  (define/drbayes (g0 x) (and (<= 0.25 x) (<= x 0.5)))
+  (define/drbayes (g x) (and (g0 (list-ref x 0))
+                             (g0 (list-ref x 1))
+                             (g0 (list-ref x 2)))))
 
 #;; Test: sqr
 ;; Preimage is [0.5,sqrt(1/2)]
 (begin
-  (define e (drbayes (sqr (random))))
-  (define B (real-set 0.25 0.5 #t #t)))
+  (define/drbayes (e) (sqr (random)))
+  (define/drbayes (g x) (and (<= 0.25 x) (<= x 0.5))))
 
 #;; Test: list, sqr
 ;; Preimage is a rectangle [0.25,0.5] x [0.5,sqrt(1/2)] x [0.5,sqrt(1/2)]
 (begin
-  (define e (drbayes (list (random) (sqr (random)) (sqr (random)))))
-  (define I (real-set 0.25 0.5))
-  (define B (set-list I I I)))
+  (define/drbayes (e) (list (random) (sqr (random)) (sqr (random))))
+  (define/drbayes (g0 x) (and (<= 0.25 x) (<= x 0.5)))
+  (define/drbayes (g x) (and (g0 (list-ref x 0))
+                             (g0 (list-ref x 1))
+                             (g0 (list-ref x 2)))))
 
 #;; Test: random, let
 ;; Preimage is [0.25,0.5]
 (begin
-  (define e (drbayes (let ([x  (random)]) x)))
-  (define B (real-set 0.25 0.5 #t #t)))
+  (define/drbayes (e) (let ([x (random)]) x))
+  (define/drbayes (g x) (and (<= 0.25 x) (<= x 0.5))))
 
 #;; Test: sqr, let
 ;; Preimage is [0.5,sqrt(1/2)]
 (begin
-  (define e (drbayes (let ([x  (sqr (random))]) x)))
-  (define B (real-set 0.25 0.5 #t #t)))
+  (define/drbayes (e) (let ([x  (sqr (random))]) x))
+  (define/drbayes (g x) (and (<= 0.25 x) (<= x 0.5))))
 
 #;; Test: list, sqr, let
-;; Preimage is [0.5,sqrt(1/2)] x [0.25,0.5] x [0.5,sqrt(1/2)]
+;; Preimage is [0.25,0.5] × [0.5,sqrt(1/2)] x [0.5,sqrt(1/2)]
 (begin
-  (define/drbayes e
+  (define/drbayes (e)
     (let ([lst  (list (random) (sqr (random)) (sqr (random)))])
       (list (list-ref lst (const 1))
             (list-ref lst (const 0))
             (list-ref lst (const 2)))))
-  (define I (real-set 0.25 0.5 #t #t))
-  (define B (set-list I I I)))
+  (define/drbayes (g0 x) (and (<= 0.25 x) (<= x 0.5)))
+  (define/drbayes (g x) (and (g0 (list-ref x 0))
+                             (g0 (list-ref x 1))
+                             (g0 (list-ref x 2)))))
 
-#;; Test: inversion
+;; Test: inversion
 ;; Preimage is [0.25,0.5] x [0.25,0.5] x [0.25,0.5]
 (begin
-  (define e (drbayes (list (random) (/ (random)) (/ (random)))))
-  (define I (real-set 2.0 4.0))
-  (define B (set-list (real-set 0.25 0.5) I I)))
+  (define/drbayes (e) (list (random) (/ (random)) (/ (random))))
+  (define/drbayes (g x)
+    (let ([x0  (list-ref x 0)]
+          [x1  (list-ref x 1)]
+          [x2  (list-ref x 2)])
+      (and (<= 0.25 x0) (<= x0 0.5)
+           (<= 2.0 x1) (<= x1 4.0)
+           (<= 2.0 x2) (<= x2 4.0)))))
 
 #;; Test: addition
 ;; Preimage is a 2D downard diagonal strip
@@ -292,7 +293,7 @@
   
   (normal-normal/lw 0 1 '(2.0 1.0) '(1.0 1.0)))
 
-;; Test: observing sum of normals
+#;; Test: observing sum of normals
 (begin
   (interval-max-splits 0)
   
@@ -826,15 +827,19 @@
 
 ;; ===================================================================================================
 
+(define/drbayes (e*)
+  (let ([x (e)])
+    (strict-if (g x) x (fail))))
+
 (define-values (f h idxs)
-  (match-let ([(meaning _ f h k)  e])
+  (match-let ([(meaning _ f h k)  (drbayes (e*))])
     (values (run/bot* f '()) (run/pre* h '()) (k '()))))
 
 (define (empty-set-error)
   (error 'drbayes-sample "cannot sample from the empty set"))
 
 (define refine
-  (if (empty-set? B) (empty-set-error) (preimage-refiner h B)))
+  (preimage-refiner h universe))
 
 (define S
   (let ([S  (refine (cons omegas traces))])
@@ -858,9 +863,7 @@
 
 (: accept-sample? (domain-sample -> Boolean))
 (define (accept-sample? s)
-  (define b (domain-sample-b s))
-  (and (not (bottom? b))
-       (set-member? B b)))
+  (not (bottom? (domain-sample-b s))))
 
 (: orig-samples (Listof store-rect-sample))
 (define orig-samples
@@ -1022,12 +1025,7 @@
 (printf "Corr(W,M) = ~v~n" (correlation ws ms))
 
 (with-handlers ([exn?  (λ (_) (printf "density plot failed~n"))])
-  (plot (list (function (distribution-pdf (normal-dist 2/3 (sqrt 1/3)))
-                        #:width 3.5 #:color 0 #:style 'short-dash
-                        #:label "True Density")
-              (density x0s 1 ws
-                       #:width 4 #:color "white")
-              (density x0s 1 ws
+  (plot (list (density x0s 1 ws
                        #:width 2
                        #:label "Est. Density"
                        ))

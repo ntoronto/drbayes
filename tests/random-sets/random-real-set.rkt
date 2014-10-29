@@ -1,8 +1,8 @@
 #lang typed/racket
 
 (require math/distributions
-         "../private/set/real-set.rkt"
-         "random-utils.rkt")
+         "../../private/set/real-set.rkt"
+         "../test-utils.rkt")
 
 (provide (all-defined-out))
 

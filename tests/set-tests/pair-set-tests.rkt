@@ -1,14 +1,14 @@
 #lang typed/racket
 
-(require "../private/set/pair-set.rkt"
-         "../private/set/real-set.rkt"
-         "../private/set/bool-set.rkt"
-         "../private/untyped-utils.rkt"
-         "../private/utils.rkt"
-         "rackunit-utils.rkt"
-         "random-real-set.rkt"
-         "random-bool-set.rkt"
-         "profile.rkt")
+(require "../../private/set/pair-set.rkt"
+         "../../private/set/real-set.rkt"
+         "../../private/set/bool-set.rkt"
+         "../../private/untyped-utils.rkt"
+         "../../private/utils.rkt"
+         "../random-sets/random-real-set.rkt"
+         "../random-sets/random-bool-set.rkt"
+         "../test-utils.rkt"
+         "set-properties.rkt")
 
 (printf "starting...~n")
 

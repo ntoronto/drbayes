@@ -1,8 +1,8 @@
 #lang typed/racket
 
 (require math/distributions
-         "../private/set/real-set.rkt"
-         "../private/set/tree-set.rkt"
+         "../../private/set/real-set.rkt"
+         "../../private/set/tree-set.rkt"
          "random-real-set.rkt")
 
 (provide random-nonempty-omega-set random-omega-set)

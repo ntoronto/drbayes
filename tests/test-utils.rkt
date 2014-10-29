@@ -1,38 +1,31 @@
 #lang typed/racket/base
 
-(require racket/match
-         racket/promise
-         racket/list
+(require racket/list
+         (only-in typed/rackunit check-true)
          plot/typed
-         "../main.rkt"
-         (only-in typed/mred/mred Bitmap%))
+         "../main.rkt")
 
 (provide (all-defined-out)
-         write-bitmap)
+         profile-thunk
+         profile-expr)
 
-#;
-(define-type Bitmap%
-  (Class (Real Real Boolean)
-         ()
-         ([get-width (-> Integer)]
-          [get-height (-> Integer)]
-          [get-argb-pixels
-           (case-> 
-            (Integer Integer Integer Integer Bytes
-                     -> Void)
-            (Integer Integer Integer Integer Bytes Boolean
-                     -> Void)
-            (Integer Integer Integer Integer Bytes Boolean Boolean
-                     -> Void))])))
+;; ===================================================================================================
+;; Profiling
 
 (require/typed
- "untyped-test-utils.rkt"
- [write-bitmap
-  (case-> ((Instance Bitmap%) (U Path-String Output-Port) (U 'png 'jpg 'xbm 'xpm 'bmp)
-                              -> Boolean)
-          ((Instance Bitmap%) (U Path-String Output-Port) (U 'png 'jpg 'xbm 'xpm 'bmp) Natural
-                              -> Boolean))]
- )
+ profile
+ [profile-thunk  ((-> Any) -> Void)])
+
+(define: b : Boolean #f)
+
+(define-syntax-rule (profile-expr e . args)
+  (let* ([thnk  (λ () e)]
+         [val  (if b (thnk) #f)])
+    (profile-thunk (λ () (set! val (thnk))) . args)
+    (assert val (λ: ([x : Any]) x))))
+
+;; ===================================================================================================
+;; Plotting utils
 
 (: real-set->ivls (Nonempty-Real-Set -> (Listof ivl)))
 (define (real-set->ivls I)
@@ -80,3 +73,16 @@
         [(tagged-value? v)  (value->listof-flonum (tagged-value-value v))]
         [else  (list -1.0)]))
 
+;; ===================================================================================================
+;; Testing utils
+
+(: random-element (All (A) ((Listof A) -> A)))
+(define (random-element xs)
+  (list-ref xs (random (length xs))))
+
+;; Using this is about 1000x faster than using `check-true' directly, mostly because it doesn't have
+;; to construct the message unless there's a failure
+(define-syntax-rule (check-prop expr msg)
+  (if expr (void) (check-true expr msg)))
+
+(define-syntax-rule (implies a b) (or (not a) b))

@@ -1,9 +1,9 @@
 #lang typed/racket
 
-(require "../private/set/types.rkt"
-         "../private/set/pair-set.rkt"
-         "../private/untyped-utils.rkt"
-         "../private/utils.rkt")
+(require "../../private/set/types.rkt"
+         "../../private/set/pair-set.rkt"
+         "../../private/untyped-utils.rkt"
+         "../../private/utils.rkt")
 
 ;; This test ensures the rect macros are sound when given abstract types and operations, by
 ;; wrapping them with polymorphic functions.
@@ -37,7 +37,9 @@
               ((U N F) (U N F E) -> (U N F))
               ((U N F E) (U N F E) -> (U N F E)))]
    [subseteq?
-    : ((U N F E) (U N F E) -> Boolean)])
+    : ((U N F E) (U N F E) -> Boolean)]
+   [singleton?
+    : ((U N F E) -> Boolean)])
   #:transparent)
 
 ;; ===================================================================================================
@@ -52,9 +54,18 @@
     (define intersect ((inst set-sig-intersect N F E V) ops))
     (define join ((inst set-sig-join N F E V) ops))
     (define subseteq? ((inst set-sig-subseteq? N F E V) ops))
+    (define singleton? ((inst set-sig-singleton? N F E V) ops))
     (define-syntax name
       (set-sig #'(N F E V)
-               #'member? #'full? #'empty? #'full #'empty #'intersect #'join #'subseteq?))))
+               #'member?
+               #'full?
+               #'empty?
+               #'full
+               #'empty
+               #'intersect
+               #'join
+               #'subseteq?
+               #'singleton?))))
 
 (define-syntax-rule (define-rect-sig name N1 F1 E1 V1 N2 F2 E2 V2 ops1 ops2)
   (begin
@@ -67,7 +78,8 @@
        empty-rect
        ((inst construct-rect-intersect N1 F1 E1 V1 N2 F2 E2 V2) ops1 ops2)
        ((inst construct-rect-join N1 F1 E1 V1 N2 F2 E2 V2) ops1 ops2)
-       ((inst construct-rect-subseteq? N1 F1 E1 V1 N2 F2 E2 V2) ops1 ops2)))
+       ((inst construct-rect-subseteq? N1 F1 E1 V1 N2 F2 E2 V2) ops1 ops2)
+       ((inst construct-rect-singleton? N1 F1 E1 V1 N2 F2 E2 V2) ops1 ops2)))
     (define-set-sig sig (Nonextremal-Rect N1 F1 N2 F2) Full-Rect Empty-Rect (Pair V1 V2) ops)
     (define-set-sig sig1 N1 F1 E1 V1 ops1)
     (define-set-sig sig2 N2 F2 E2 V2 ops2)
@@ -100,6 +112,10 @@
 (define-syntax (do-rect-subseteq? stx)
   (syntax-case stx ()
     [(_ sig)  (make-rect-subseteq? (syntax-local-value #'sig))]))
+
+(define-syntax (do-rect-singleton? stx)
+  (syntax-case stx ()
+    [(_ sig)  (make-rect-singleton? (syntax-local-value #'sig))]))
 
 ;; ===================================================================================================
 
@@ -146,3 +162,12 @@
 (define (construct-rect-subseteq? ops1 ops2)
   (define-rect-sig sig N1 F1 E1 V1 N2 F2 E2 V2 ops1 ops2)
   (do-rect-subseteq? sig))
+
+(: construct-rect-singleton?
+   (All (N1 F1 E1 V1 N2 F2 E2 V2)
+        ((set-sig N1 F1 E1 V1)
+         (set-sig N2 F2 E2 V2)
+         -> ((Rect N1 F1 N2 F2) -> Boolean))))
+(define (construct-rect-singleton? ops1 ops2)
+  (define-rect-sig sig N1 F1 E1 V1 N2 F2 E2 V2 ops1 ops2)
+  (do-rect-singleton? sig))

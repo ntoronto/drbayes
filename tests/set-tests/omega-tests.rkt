@@ -2,11 +2,11 @@
 
 (require typed/rackunit
          math/distributions
-         "../private/set/real-set.rkt"
-         "../private/set/tree-value.rkt"
-         "../private/set/tree-set.rkt"
-         "rackunit-utils.rkt"
-         "random-omega-set.rkt")
+         "../../private/set/real-set.rkt"
+         "../../private/set/tree-value.rkt"
+         "../../private/set/tree-set.rkt"
+         "../random-sets/random-omega-set.rkt"
+         "set-properties.rkt")
 
 (printf "starting...~n")
 
