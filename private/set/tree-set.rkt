@@ -54,7 +54,8 @@
    #'empty-real-set
    #'real-set-intersect
    #'real-set-union
-   #'real-set-subseteq?))
+   #'real-set-subseteq?
+   #'real-set-singleton?))
 
 (define-syntax omega-set-sig
   (set-sig
@@ -66,7 +67,8 @@
    #'empty-omega-set
    #'omega-set-intersect
    #'omega-set-join
-   #'omega-set-subseteq?))
+   #'omega-set-subseteq?
+   #'omega-set-singleton?))
 
 (define-syntax omega-children-set-sig
   (set-sig
@@ -78,7 +80,8 @@
    #'empty-omega-children-set
    #'omega-children-set-intersect
    #'omega-children-set-join
-   #'omega-children-set-subseteq?))
+   #'omega-children-set-subseteq?
+   #'omega-children-set-singleton?))
 
 (define-syntax omega-rect-sig
   (rect-sig
@@ -139,7 +142,8 @@
    #'empty-bool-set
    #'bool-set-intersect
    #'bool-set-union
-   #'bool-set-subseteq?))
+   #'bool-set-subseteq?
+   #'bool-set-singleton?))
 
 (define-syntax trace-set-sig
   (set-sig
@@ -151,7 +155,8 @@
    #'empty-trace-set
    #'trace-set-intersect
    #'trace-set-join
-   #'trace-set-subseteq?))
+   #'trace-set-subseteq?
+   #'trace-set-singleton?))
 
 (define-syntax trace-children-set-sig
   (set-sig
@@ -163,7 +168,8 @@
    #'empty-trace-children-set
    #'trace-children-set-intersect
    #'trace-children-set-join
-   #'trace-children-set-subseteq?))
+   #'trace-children-set-subseteq?
+   #'trace-children-set-singleton?))
 
 (define-syntax trace-rect-sig
   (rect-sig

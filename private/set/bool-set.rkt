@@ -95,3 +95,7 @@
 (: boolean->singleton (Boolean -> Nonextremal-Bool-Set))
 (define (boolean->singleton b)
   (if b trues falses))
+
+(: bool-set-singleton? (Bool-Set -> Boolean))
+(define (bool-set-singleton? A)
+  (or (trues? A) (falses? A)))

@@ -43,3 +43,7 @@
 (: null-set-subseteq? (Null-Set Null-Set -> Boolean))
 (define (null-set-subseteq? A B)
   (if (empty-null-set? A) #t (nulls? B)))
+
+(: null-set-singleton? (Null-Set -> Boolean))
+(define (null-set-singleton? A)
+  (nulls? A))

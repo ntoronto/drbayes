@@ -39,7 +39,7 @@
          if cond else strict-if strict-cond
          let let*
          list-ref scale translate boolean
-         tag? tag untag)
+         equal? tag? tag untag)
 
 (module typed-defs typed/racket/base
   (provide (all-defined-out))
@@ -140,7 +140,7 @@
   (define-syntax-class 2ary-primitive
     #:description "binary primitive operator"
     #:attributes (computation)
-    #:literals (+ - * / < <= > >=)
+    #:literals (+ - * / < <= > >= equal?)
     (pattern + #:attr computation #'+/arr)
     (pattern - #:attr computation #'-/arr)
     (pattern * #:attr computation #'*/arr)
@@ -149,6 +149,7 @@
     (pattern > #:attr computation #'>/arr)
     (pattern <= #:attr computation #'<=/arr)
     (pattern >= #:attr computation #'>=/arr)
+    (pattern equal? #:attr computation #'equal?/arr)
     )
   
   (define-syntax-class n+1-ary-primitive

@@ -19,7 +19,7 @@ TODO: Look up self-balancing quadtrees to change set ops from O(n^2) to O(n*log(
 ;; Signatures for abstract set data types
 
 (begin-for-syntax
-  (struct set-sig (types member? full? empty? full empty intersect join subseteq?)
+  (struct set-sig (types member? full? empty? full empty intersect join subseteq? singleton?)
     #:transparent)
   
   (struct rect-sig (set-sig
@@ -75,6 +75,11 @@ TODO: Look up self-balancing quadtrees to change set ops from O(n^2) to O(n*log(
   (with-syntax ([(N F E V)  (set-sig-types sig)])
     #`(: ((U N F E) (U N F E) -> Boolean)
          #,(set-sig-subseteq? sig))))
+
+(define-for-syntax (set-sig-singleton?-binding sig)
+  (with-syntax ([(N F E V)  (set-sig-types sig)])
+    #`(: ((U N F E) -> Boolean)
+         #,(set-sig-singleton? sig))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Typed binding getters for rects
@@ -322,6 +327,31 @@ TODO: Look up self-balancing quadtrees to change set ops from O(n^2) to O(n*log(
 
 (define-for-syntax make-rect-subseteq? (make-maker make-rect-subseteq?*))
 
+;; ---------------------------------------------------------------------------------------------------
+;; Singleton test
+
+(define-for-syntax (make-rect-singleton?* sig)
+  (define self-sig (rect-sig-set-sig sig))
+  (define fst-sig (rect-sig-fst-set-sig sig))
+  (define snd-sig (rect-sig-snd-set-sig sig))
+  (with-syntax ([(N F E V)  (set-sig-types self-sig)])
+    (values
+     #`(let/cbn:
+        ([full? . #,(set-sig-full?-binding self-sig)]
+         [empty? . #,(set-sig-empty?-binding self-sig)]
+         [rect-fst . #,(rect-sig-rect-fst-binding sig)]
+         [rect-snd . #,(rect-sig-rect-snd-binding sig)]
+         [fst-singleton? . #,(set-sig-singleton?-binding fst-sig)]
+         [snd-singleton? . #,(set-sig-singleton?-binding snd-sig)])
+        (λ (A)
+          (cond [(empty? A)  #f]
+                [(full? A)   #f]
+                [else  (and (fst-singleton? (rect-fst A))
+                            (snd-singleton? (rect-snd A)))])))
+     #`((U N F E) -> Boolean))))
+
+(define-for-syntax make-rect-singleton? (make-maker make-rect-singleton?*))
+
 ;; ===================================================================================================
 ;; Instantiation
 
@@ -340,11 +370,13 @@ TODO: Look up self-balancing quadtrees to change set ops from O(n^2) to O(n*log(
        (with-syntax ([member?    (format-id stx "~a-~a" #'rect 'member?)]
                      [intersect  (format-id stx "~a-~a" #'rect 'intersect)]
                      [join       (format-id stx "~a-~a" #'rect 'join)]
-                     [subseteq?  (format-id stx "~a-~a" #'rect 'subseteq?)])
-         (let-values ([(member?-expr    member?-type)    (make-rect-member?* sig)]
-                      [(intersect-expr  intersect-type)  (make-rect-intersect* sig)]
-                      [(join-expr       join-type)       (make-rect-join* sig)]
-                      [(subseteq?-expr  subseteq?-type)  (make-rect-subseteq?* sig)])
+                     [subseteq?  (format-id stx "~a-~a" #'rect 'subseteq?)]
+                     [singleton? (format-id stx "~a-~a" #'rect 'singleton?)])
+         (let-values ([(member?-expr    member?-type)     (make-rect-member?* sig)]
+                      [(intersect-expr  intersect-type)   (make-rect-intersect* sig)]
+                      [(join-expr       join-type)        (make-rect-join* sig)]
+                      [(subseteq?-expr  subseteq?-type)   (make-rect-subseteq?* sig)]
+                      [(singleton?-expr singleton?-type)  (make-rect-singleton?* sig)])
            (quasisyntax/loc stx
              (begin
                (: member? #,member?-type)
@@ -357,4 +389,7 @@ TODO: Look up self-balancing quadtrees to change set ops from O(n^2) to O(n*log(
                (define join #,join-expr)
                
                (: subseteq? #,subseteq?-type)
-               (define subseteq? #,subseteq?-expr))))))]))
+               (define subseteq? #,subseteq?-expr)
+               
+               (: singleton? #,singleton?-type)
+               (define singleton? #,singleton?-expr))))))]))

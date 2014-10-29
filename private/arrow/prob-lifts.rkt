@@ -47,6 +47,13 @@
 (define let/idx (make-let >>>/idx &&&/idx any/idx))
 
 ;; ===================================================================================================
+;; Equality lifts
+
+(define equal?/bot* (η/bot* equal?/bot))
+(define equal?/pre* (η/pre* equal?/pre))
+(define equal?/idx any/idx)
+
+;; ===================================================================================================
 ;; Tagged value lifts
 
 (define tag?/bot* (λ: ([tag : Tag]) (η/bot* (tag?/bot tag))))
@@ -62,10 +69,7 @@
 (define untag/idx (λ: ([tag : Tag]) any/idx))
 
 ;; ===================================================================================================
-;; Computable lifts
-
-;; ---------------------------------------------------------------------------------------------------
-;; Data type predicates
+;; Primitive type predicate lifts
 
 (define real?/bot* (η/bot* real?/bot))
 (define real?/pre* (η/pre* real?/pre))
@@ -82,6 +86,9 @@
 (define boolean?/bot* (η/bot* boolean?/bot))
 (define boolean?/pre* (η/pre* boolean?/pre))
 (define boolean?/idx any/idx)
+
+;; ===================================================================================================
+;; Real primitive lifts
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Monotone elementary R -> R functions

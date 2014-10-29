@@ -245,6 +245,34 @@
           (predicate/pre Xt Xf)))
 
 ;; ===================================================================================================
+;; Equality lifts
+
+(: equal?/bot Bot-Arrow)
+(define (equal?/bot a)
+  (cond [(pair? a)  (equal? (car a) (cdr a))]
+        [else  (bottom (delay (format "equal?: expected pair; given ~e" a)))]))
+
+(: equal?/pre Pre-Arrow)
+(define (equal?/pre A)
+  (define-values (A1 A2) (set-projs A))
+  (cond [(or (empty-set? A1) (empty-set? A2))  empty-pre-mapping]
+        [else
+         (nonempty-pre-mapping
+          #;; Method 1:
+          (if (set-equal? A1 A2)
+              (if (set-singleton? A1) trues bools)
+              (if (empty-set? (set-intersect A1 A2)) falses bools))
+          ;; Method 2:
+          (cond [(empty-set? (set-intersect A1 A2))  falses]
+                [(and (set-singleton? A1) (set-singleton? A2))  trues]
+                [else  bools])
+          (λ (B)
+            (cond [(set-member? B #f)  (pair-set A1 A2)]
+                  [(set-member? B #t)  (define A (set-intersect A1 A2))
+                                       (set-pair A A)]
+                  [else  empty-set])))]))
+
+;; ===================================================================================================
 ;; Tagged value lifts
 
 ;; ---------------------------------------------------------------------------------------------------
@@ -279,15 +307,15 @@
   (pre-mapping (set-untag A tag) (λ (B) (set-tag B tag))))
 
 ;; ===================================================================================================
-;; Computable lifts
-
-;; ---------------------------------------------------------------------------------------------------
-;; Data type predicates
+;; Primitive type predicate lifts
 
 (define-values (real?/bot real?/pre) (predicate/prim 'real? flonum? reals not-reals))
 (define-values (null?/bot null?/pre) (predicate/prim 'null? null? nulls not-nulls))
 (define-values (pair?/bot pair?/pre) (predicate/prim 'pair? pair? pairs not-pairs))
 (define-values (boolean?/bot boolean?/pre) (predicate/prim 'boolean? boolean? bools not-bools))
+
+;; ===================================================================================================
+;; Real primitive lifts
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Monotone elementary R -> R functions

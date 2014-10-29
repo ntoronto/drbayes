@@ -43,7 +43,7 @@
 (define-drbayes-arrow-comps fail id restrict const ref)
 (define-drbayes-arrow-comps random boolean ifte*)
 (define-drbayes-arrow-comps null list apply let)
-(define-drbayes-arrow-comps tag? tag untag)
+(define-drbayes-arrow-comps equal? tag? tag untag)
 (define-drbayes-arrow-comps real? null? pair? boolean?)
 (define-drbayes-arrow-comps scale translate)
 (define-drbayes-arrow-comps neg exp log sqrt asin acos)

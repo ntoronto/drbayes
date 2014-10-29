@@ -18,6 +18,7 @@
          interval-list?
          interval-list-elements
          real-set?
+         real-set-singleton?
          real-set-complement
          real-set-subtract
          real-set-union
@@ -240,6 +241,12 @@
     (cond [(empty? Is)  empty-real-set]
           [(empty? (rest Is))  (first Is)]
           [else  (Nonextremal-Interval-List Is)]))
+  
+  (: real-set-singleton? (Real-Set -> Boolean))
+  (define (real-set-singleton? I)
+    (and (Nonextremal-Interval? I)
+         (= (Nonextremal-Interval-min I)
+            (Nonextremal-Interval-max I))))
   
   ;; -------------------------------------------------------------------------------------------------
   ;; Complement

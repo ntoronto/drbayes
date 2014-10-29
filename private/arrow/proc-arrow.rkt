@@ -71,6 +71,8 @@
 ;; ===================================================================================================
 ;; Other lifts
 
+(define equal?/proc (lower/proc equal?/bot))
+
 (define tag?/proc (λ: ([tag : Tag]) (lower/proc (tag?/bot tag))))
 (define tag/proc (λ: ([tag : Tag]) (lower/proc (tag/bot tag))))
 (define untag/proc (λ: ([tag : Tag]) (lower/proc (untag/bot tag))))

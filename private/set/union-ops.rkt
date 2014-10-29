@@ -65,6 +65,15 @@
         [(and (trace-set? A) (trace-set? B))  (trace-set-subseteq? A B)]
         [else  different]))
 
+(: basic-singleton? (Basic -> Boolean))
+(define (basic-singleton? A)
+  (cond [(real-set? A)  (real-set-singleton? A)]
+        [(bool-set? A)  (bool-set-singleton? A)]
+        [(null-set? A)  (null-set-singleton? A)]
+        [(pair-set? A)  (pair-set-singleton? A)]
+        ;; Omega and trace sets can't be singletons
+        [else  #f]))
+
 ;; ===================================================================================================
 ;; Membership
 
@@ -465,6 +474,28 @@
         [else  #f]))
 
 ;; ===================================================================================================
+;; Singleton test
+
+(: set-singleton? (Set -> Boolean))
+(define (set-singleton? A)
+  (cond [(empty-set? A)  #f]
+        [(universe? A)   #f]
+        [(bot-set? A)
+         (cond [(bot-basic? A)   (bot-basic-singleton? A)]
+               [(bot-tagged? A)  (bot-tagged-singleton? A)]
+               [else  #f])]
+        ;; Top sets can't be singletons
+        [else  #f]))
+
+(: bot-basic-singleton? (Bot-Basic -> Boolean))
+(define (bot-basic-singleton? A)
+  (basic-singleton? A))
+
+(: bot-tagged-singleton? (Bot-Tagged -> Boolean))
+(define (bot-tagged-singleton? A)
+  (set-singleton? (bot-tagged-set A)))
+
+;; ===================================================================================================
 
 (define-syntax ssig
   (set-sig
@@ -476,7 +507,8 @@
    #'empty-set
    #'set-intersect
    #'set-join
-   #'set-subseteq?))
+   #'set-subseteq?
+   #'set-singleton?))
 
 (define-syntax rsig
   (set-sig
@@ -488,7 +520,8 @@
    #'empty-pair-set
    #'pair-set-intersect
    #'pair-set-join
-   #'pair-set-subseteq?))
+   #'pair-set-subseteq?
+   #'pair-set-singleton?))
 
 (define-syntax sig
   (rect-sig
