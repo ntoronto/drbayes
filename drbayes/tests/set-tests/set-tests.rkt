@@ -2,23 +2,12 @@
 
 (require typed/rackunit
          math/distributions
-         "../private/set/types.rkt"
-         "../private/set/real-set.rkt"
-         "../private/set/bool-set.rkt"
-         "../private/set/null-set.rkt"
-         "../private/set/tree-set.rkt"
-         "../private/set/extremal-set.rkt"
-         "../private/set/union.rkt"
-         "../private/set/tree-value.rkt"
-         "../private/set/value.rkt"
-         "../private/set/union-ops.rkt"
-         "../private/set/union-more-ops.rkt"
-         "rackunit-utils.rkt"
-         "random-real-set.rkt"
-         "random-omega-set.rkt"
-         "random-trace-set.rkt"
-         "random-utils.rkt"
-         "profile.rkt")
+         "../../private/set.rkt"
+         "../random-sets/random-real-set.rkt"
+         "../random-sets/random-omega-set.rkt"
+         "../random-sets/random-trace-set.rkt"
+         "../test-utils.rkt"
+         "set-properties.rkt")
 
 (printf "starting...~n")
 

@@ -1,7 +1,7 @@
 #lang typed/racket
 
-(require "../private/set/bool-set.rkt"
-         "../private/set/tree-set.rkt"
+(require "../../private/set/bool-set.rkt"
+         "../../private/set/tree-set.rkt"
          "random-bool-set.rkt")
 
 (provide random-nonempty-trace-set random-trace-set)

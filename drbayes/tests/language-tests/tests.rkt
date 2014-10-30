@@ -4,9 +4,8 @@
          math/distributions
          math/statistics
          math/flonum
-         "../main.rkt"
-         "test-utils.rkt"
-         "profile.rkt"
+         drbayes
+         "../test-utils.rkt"
          "normal-normal.rkt")
 
 (printf "starting...~n~n")

@@ -32,7 +32,8 @@
    #'empty-real-set
    #'real-set-intersect
    #'real-set-union
-   #'real-set-subseteq?))
+   #'real-set-subseteq?
+   #'real-set-singleton?))
 
 (define-syntax bool-set-sig
   (set-sig
@@ -44,7 +45,8 @@
    #'empty-bool-set
    #'bool-set-intersect
    #'bool-set-union
-   #'bool-set-subseteq?))
+   #'bool-set-subseteq?
+   #'bool-set-singleton?))
 
 (define-syntax self-sig
   (set-sig
@@ -56,7 +58,8 @@
    #'empty-rect
    #'rect-intersect
    #'rect-join
-   #'rect-subseteq?))
+   #'rect-subseteq?
+   #'rect-singleton?))
 
 (define-syntax sig
   (rect-sig
