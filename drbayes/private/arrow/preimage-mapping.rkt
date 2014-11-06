@@ -21,10 +21,12 @@
 
 (: ap/pre (Pre-Mapping Set -> Set))
 (define (ap/pre h B)
-  (match h
-    [(? empty-pre-mapping?)      empty-set]
-    [(nonempty-pre-mapping Y p)  (let ([B  (set-intersect B Y)])
-                                   (if (empty-set? B) empty-set (p B)))]))
+  (if (empty-pre-mapping? h)
+      empty-set
+      (let ([B  (set-intersect B (nonempty-pre-mapping-range h))])
+        (if (empty-set? B)
+            empty-set
+            ((nonempty-pre-mapping-fun h) B)))))
 
 (: range/pre (Pre-Mapping -> Set))
 (define (range/pre h)
@@ -58,20 +60,15 @@
 
 (: uplus/pre (Pre-Mapping Pre-Mapping -> Pre-Mapping))
 (define (uplus/pre h1 h2)
-  (cond [(and (empty-pre-mapping? h1) (empty-pre-mapping? h2))  empty-pre-mapping]
-        [(empty-pre-mapping? h1)  h2]
+  (cond [(empty-pre-mapping? h1)  h2]
         [(empty-pre-mapping? h2)  h1]
-        #;; Direct implementation from the paper:
-        [else  (nonempty-pre-mapping
-                (set-join (nonempty-pre-mapping-range h1)
-                          (nonempty-pre-mapping-range h2))
-                (λ (B) (set-join (ap/pre h1 B)
-                                 (ap/pre h2 B))))]
-        ;; Less direct implementation that computes tighter preimages (should this be in the paper?)
         [else
          (define Y1 (nonempty-pre-mapping-range h1))
          (define Y2 (nonempty-pre-mapping-range h2))
-         (nonempty-pre-mapping
-          (set-join Y1 Y2)
-          (λ (B) (set-join (ap/pre h1 (set-intersect Y1 B))
-                           (ap/pre h2 (set-intersect Y2 B)))))]))
+         (define Y (set-join Y1 Y2))
+         #;; Direct implementation from the paper:
+         (nonempty-pre-mapping Y (λ (B) (set-join (ap/pre h1 B)
+                                                  (ap/pre h2 B))))
+         ;; Implementation that computes tighter preimages:
+         (nonempty-pre-mapping Y (λ (B) (set-join (ap/pre h1 (set-intersect Y1 B))
+                                                  (ap/pre h2 (set-intersect Y2 B)))))]))

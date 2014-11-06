@@ -190,10 +190,7 @@
 
 (: proj-domain-fail (Symbol Value -> Bottom))
 (define (proj-domain-fail name a)
-  (bottom
-   (delay
-     (format
-      "~a: expected value in (set-pair (set-pair omegas traces) universe); given ~e" name a))))
+  (bottom (delay (format "~a: expected value in program domain; given ~e" name a))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Branch trace projections
@@ -326,88 +323,55 @@
             [(eq? b #f)  (f3 a)]
             [else  (bottom (delay (format "ifte*: expected boolean condition; got ~e" b)))]))))
 
-(: terminating-ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> (Tree-Index -> Pre-Arrow)))
+(: terminating-ifte*/pre (-> Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow))
 ;; This direct translation from the paper ensures termination
-(define (terminating-ifte*/pre* k1 k2 k3)
-  (λ: ([j : Tree-Index])
-    (define hb (run/pre* branch/pre* j))
-    (define h1 (run/pre* k1 (left j)))
-    (define h2 (run/pre* k2 (left (right j))))
-    (define h3 (run/pre* k3 (right (right j))))
-    (λ: ([A : Nonempty-Set])
-      (let ([hb  (hb A)]
-            [h1  (h1 A)])
-        (cond [(or (empty-pre-mapping? h1) (empty-pre-mapping? hb))  empty-pre-mapping]
-              [else
-               (match-define (nonempty-pre-mapping C1 p1) h1)
-               (match-define (nonempty-pre-mapping Cb pb) hb)
-               (define C (set-intersect C1 Cb))
-               (define Ct (set-intersect C trues))
-               (define Cf (set-intersect C falses))
-               (define A2 (if (empty-set? Ct) empty-set (set-intersect (p1 Ct) (pb Ct))))
-               (define A3 (if (empty-set? Cf) empty-set (set-intersect (p1 Cf) (pb Cf))))
-               (cond [(eq? Cb bools)  (define A (set-join A2 A3))
-                                      (nonempty-pre-mapping universe (λ (B) A))]
-                     [(eq? Cb trues)   (run/pre h2 A2)]
-                     [(eq? Cb falses)  (run/pre h3 A3)]
-                     [else  empty-pre-mapping])])))))
+(define ((terminating-ifte*/pre hb h1 h2 h3) A)
+  (let ([hb  (hb A)]
+        [h1  (h1 A)])
+    (cond [(or (empty-pre-mapping? h1) (empty-pre-mapping? hb))  empty-pre-mapping]
+          [else
+           (match-define (nonempty-pre-mapping C1 p1) h1)
+           (match-define (nonempty-pre-mapping Cb pb) hb)
+           (define C (set-intersect C1 Cb))
+           (define Ct (set-intersect C trues))
+           (define Cf (set-intersect C falses))
+           (define A2 (if (empty-set? Ct) empty-set (set-intersect (p1 Ct) (pb Ct))))
+           (define A3 (if (empty-set? Cf) empty-set (set-intersect (p1 Cf) (pb Cf))))
+           (cond [(eq? Cb bools)  (define A (set-join A2 A3))
+                                  (nonempty-pre-mapping universe (λ (B) A))]
+                 [(eq? Cb trues)   (run/pre h2 A2)]
+                 [(eq? Cb falses)  (run/pre h3 A3)]
+                 [else  empty-pre-mapping])])))
 
-#;; A small change - using emptiness of A2 and A3 instead of the contents of Cb - allows ifte*/pre*
-;; to rule out branches using preimages computed by h1, but doesn't always ensure termination.
+(: precise-ifte*/pre (-> Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow))
+;; A more precise ifte* combinator that can rule out branches using preimages computed by h1, but
+;; doesn't always ensure termination.
 ;; Conjecture: if a program's interpretation as a bot* arrow terminates with probability 1, a pre*
 ;; arrow interpretation that uses this approximation also terminates with probability 1.
-(define (more-precise-ifte*/pre* k1 k2 k3)
-  (λ: ([j : Tree-Index])
-    (define hb (run/pre* branch/pre* j))
-    (define h1 (run/pre* k1 (left j)))
-    (define h2 (run/pre* k2 (left (right j))))
-    (define h3 (run/pre* k3 (right (right j))))
-    (λ: ([A : Nonempty-Set])
-      (let ([hb  (hb A)]
-            [h1  (h1 A)])
-        (cond [(or (empty-pre-mapping? h1) (empty-pre-mapping? hb))  empty-pre-mapping]
-              [else
-               (match-define (nonempty-pre-mapping C1 p1) h1)
-               (match-define (nonempty-pre-mapping Cb pb) hb)
-               (define C (set-intersect C1 Cb))
-               (define Ct (set-intersect C trues))
-               (define Cf (set-intersect C falses))
-               (define A2 (if (empty-set? Ct) empty-set (set-intersect (p1 Ct) (pb Ct))))
-               (define A3 (if (empty-set? Cf) empty-set (set-intersect (p1 Cf) (pb Cf))))
-               (cond [(and (empty-set? A2) (empty-set? A3))  empty-pre-mapping]
-                     [(empty-set? A3)  (h2 A2)]
-                     [(empty-set? A2)  (h3 A3)]
-                     [else  (define A (set-join A2 A3))
-                            (nonempty-pre-mapping universe (λ (B) A))])])))))
+(define ((precise-ifte*/pre hb h1 h2 h3) A)
+  (let ([h1  (h1 A)])
+    (define A2 (ap/pre h1 trues))
+    (define A3 (ap/pre h1 falses))
+    (define hb2 (run/pre hb A2))
+    (define hb3 (run/pre hb A3))
+    (let ([A2  (set-intersect A2 (ap/pre hb2 trues))]
+          [A3  (set-intersect A3 (ap/pre hb3 falses))])
+      (cond [(and (empty-set? A2) (empty-set? A3))  empty-pre-mapping]
+            [(empty-set? A3)  (h2 A2)]
+            [(empty-set? A2)  (h3 A3)]
+            [else  (define A (set-join A2 A3))
+                   (nonempty-pre-mapping universe (λ (B) A))]))))
 
-(: precise-ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> (Tree-Index -> Pre-Arrow)))
-;; A slightly more precise version of the above (hb is applied to A2 or A3, not A)
-(define (precise-ifte*/pre* k1 k2 k3)
-  (λ: ([j : Tree-Index])
-    (define hb (run/pre* branch/pre* j))
-    (define h1 (run/pre* k1 (left j)))
-    (define h2 (run/pre* k2 (left (right j))))
-    (define h3 (run/pre* k3 (right (right j))))
-    (λ: ([A : Nonempty-Set])
-      (let ([h1  (h1 A)])
-        (define A2 (ap/pre h1 trues))
-        (define A3 (ap/pre h1 falses))
-        (define hb2 (run/pre hb A2))
-        (define hb3 (run/pre hb A3))
-        (let ([A2  (set-intersect A2 (ap/pre hb2 trues))]
-              [A3  (set-intersect A3 (ap/pre hb3 falses))])
-          (cond [(and (empty-set? A2) (empty-set? A3))  empty-pre-mapping]
-                [(empty-set? A3)  (h2 A2)]
-                [(empty-set? A2)  (h3 A3)]
-                [else  (define A (set-join A2 A3))
-                       (nonempty-pre-mapping universe (λ (B) A))]))))))
-
-(: ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> Pre*-Arrow))
+(: ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> (Tree-Index -> Pre-Arrow)))
 (define (ifte*/pre* k1 k2 k3)
   (λ: ([j : Tree-Index])
-    (if (drbayes-always-terminate?)
-        ((terminating-ifte*/pre* k1 k2 k3) j)
-        ((precise-ifte*/pre* k1 k2 k3) j))))
+    ((if (drbayes-always-terminate?)
+         terminating-ifte*/pre
+         precise-ifte*/pre)
+     (run/pre* branch/pre* j)
+     (run/pre* k1 (left j))
+     (run/pre* k2 (left (right j)))
+     (run/pre* k3 (right (right j))))))
 
 (: ifte*/idx (Idx-Arrow Idx-Arrow Idx-Arrow -> Idx-Arrow))
 (define ((ifte*/idx k1 k2 k3) j)
