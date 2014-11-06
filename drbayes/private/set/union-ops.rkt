@@ -6,7 +6,6 @@
          "real-set.rkt"
          "null-set.rkt"
          "bool-set.rkt"
-         "pair-set.rkt"
          "tree-set.rkt"
          "tree-value.rkt"
          "bottom.rkt"
@@ -16,6 +15,73 @@
          "../untyped-utils.rkt")
 
 (provide (all-defined-out))
+
+;; ===================================================================================================
+;; Pair sets
+
+(: pair-set (case-> (Nonempty-Set Nonextremal-Set -> Nonextremal-Pair-Set)
+                    (Nonextremal-Set Nonempty-Set -> Nonextremal-Pair-Set)
+                    (Nonempty-Set Nonempty-Set -> Nonempty-Pair-Set)
+                    (Nonfull-Set Set -> Nonfull-Pair-Set)
+                    (Set Nonfull-Set -> Nonfull-Pair-Set)
+                    (Set Set -> Pair-Set)))
+(define (pair-set A1 A2)
+  (cond [(and (universe? A1) (universe? A2))  pairs]
+        [(empty-set? A1)  empty-pair-set]
+        [(empty-set? A2)  empty-pair-set]
+        [else  (Nonextremal-Pair-Set A1 A2)]))
+
+(: pair-set-member? (-> Pair-Set (Pair Value Value) Boolean))
+(define (pair-set-member? A x)
+  (cond [(empty-pair-set? A)  #f]
+        [(pairs? A)  #t]
+        [else  (and (set-member? (Nonextremal-Pair-Set-fst A) (car x))
+                    (set-member? (Nonextremal-Pair-Set-snd A) (cdr x)))]))
+
+(: pair-set-intersect (case-> (-> Pair-Set Nonfull-Pair-Set Nonfull-Pair-Set)
+                              (-> Nonfull-Pair-Set Pair-Set Nonfull-Pair-Set)
+                              (-> Pair-Set Pair-Set Pair-Set)))
+(define (pair-set-intersect A B)
+  (cond [(empty-pair-set? A)  A]
+        [(empty-pair-set? B)  B]
+        [(pairs? A)  B]
+        [(pairs? B)  A]
+        [else
+         (let ([C1  (set-intersect (Nonextremal-Pair-Set-fst A) (Nonextremal-Pair-Set-fst B))])
+           (if (empty-set? C1)
+               empty-pair-set
+               (let ([C2  (set-intersect (Nonextremal-Pair-Set-snd A) (Nonextremal-Pair-Set-snd B))])
+                 (if (empty-set? C2)
+                     empty-pair-set
+                     (Nonextremal-Pair-Set C1 C2)))))]))
+
+(: pair-set-join (case-> (-> Pair-Set Nonempty-Pair-Set Nonempty-Pair-Set)
+                         (-> Nonempty-Pair-Set Pair-Set Nonempty-Pair-Set)
+                         (-> Pair-Set Pair-Set Pair-Set)))
+(define (pair-set-join A B)
+  (cond [(empty-pair-set? A)  B]
+        [(empty-pair-set? B)  A]
+        [(pairs? A)  A]
+        [(pairs? B)  B]
+        [else
+         (define C1 (set-join (Nonextremal-Pair-Set-fst A) (Nonextremal-Pair-Set-fst B)))
+         (define C2 (set-join (Nonextremal-Pair-Set-snd A) (Nonextremal-Pair-Set-snd B)))
+         (if (and (universe? C1) (universe? C2))
+             pairs
+             (Nonextremal-Pair-Set C1 C2))]))
+
+(: pair-set-subseteq? (-> Pair-Set Pair-Set Boolean))
+(define (pair-set-subseteq? A B)
+  (cond [(or (empty-pair-set? A) (pairs? B))  #t]
+        [(or (pairs? A) (empty-pair-set? B))  #f]
+        [else  (and (set-subseteq? (Nonextremal-Pair-Set-fst A) (Nonextremal-Pair-Set-fst B))
+                    (set-subseteq? (Nonextremal-Pair-Set-snd A) (Nonextremal-Pair-Set-snd B)))]))
+
+(: pair-set-singleton? (-> Pair-Set Boolean))
+(define (pair-set-singleton? A)
+  (cond [(or (empty-pair-set? A) (pairs? A))  #f]
+        [else  (and (set-singleton? (Nonextremal-Pair-Set-fst A))
+                    (set-singleton? (Nonextremal-Pair-Set-snd A)))]))
 
 ;; ===================================================================================================
 ;; Basic set ops
@@ -495,42 +561,3 @@
 (: bot-tagged-singleton? (Bot-Tagged -> Boolean))
 (define (bot-tagged-singleton? A)
   (set-singleton? (bot-tagged-set A)))
-
-;; ===================================================================================================
-
-(define-syntax ssig
-  (set-sig
-   #'(Nonextremal-Set Universe Empty-Set Value)
-   #'set-member?
-   #'universe?
-   #'empty-set?
-   #'universe
-   #'empty-set
-   #'set-intersect
-   #'set-join
-   #'set-subseteq?
-   #'set-singleton?))
-
-(define-syntax rsig
-  (set-sig
-   #'(Nonextremal-Pair-Set Full-Pair-Set Empty-Pair-Set (Pair Value Value))
-   #'pair-set-member?
-   #'pairs?
-   #'empty-pair-set?
-   #'pairs
-   #'empty-pair-set
-   #'pair-set-intersect
-   #'pair-set-join
-   #'pair-set-subseteq?
-   #'pair-set-singleton?))
-
-(define-syntax sig
-  (rect-sig
-   (syntax-local-value #'rsig)
-   (syntax-local-value #'ssig)
-   (syntax-local-value #'ssig)
-   #'Nonextremal-Pair-Set #'Nonextremal-Pair-Set-fst #'Nonextremal-Pair-Set-snd
-   #'Pair #'car #'cdr))
-
-(define-rect-constructor pair-set sig)
-(define-rect-ops pair-set sig)
