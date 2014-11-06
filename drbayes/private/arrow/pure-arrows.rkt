@@ -25,8 +25,10 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; Failure
 
+(define fail-value (bottom (delay "fail")))
+
 (: fail/bot Bot-Arrow)
-(define (fail/bot a) (bottom (delay "fail")))
+(define (fail/bot a) fail-value)
 
 (: fail/pre Pre-Arrow)
 (define (fail/pre A) empty-pre-mapping)

@@ -319,7 +319,7 @@
     [(store-rect-sample S m p)
      (match-define (cons R T) S)
      (define r (omega-set-sample-point R))
-     (define t (trace-set-sample-point T))
+     (define t (trace-set-infimum T))
      (store-sample (cons r t) (/ m p))]
     [_  #f]))
 
@@ -330,7 +330,7 @@
 (define (drbayes-sample e n)
   (define-values (f h idxs)
     (match-let ([(meaning _ f h k)  e])
-      (values (run/bot* f '()) (run/pre* h '()) (k '()))))
+      (values (run/bot* f j0) (run/pre* h j0) (k j0))))
   
   (define refine (preimage-refiner h universe))
   
@@ -373,7 +373,7 @@
                    (define pt (refinement-sample-point S idxs refine))
                    ;(match-define (cons R T) S)
                    ;(define r (omega-set-sample-point R))
-                   ;(define t (trace-set-sample-point T))
+                   ;(define t (trace-set-infimum T))
                    ;(define pt (store-sample (cons r t) m))
                    (match pt
                      [(store-sample s m)

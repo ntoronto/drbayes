@@ -6,6 +6,7 @@
          racket/match
          racket/promise
          "types.rkt"
+         "bottom.rkt"
          "real-set.rkt"
          "bool-set.rkt"
          "null-set.rkt"
@@ -13,12 +14,6 @@
          "tree-value.rkt"
          "tree-set.rkt"
          "union.rkt")
-
-(struct: Bottom ([message : (Promise String)]) #:transparent)
-
-(define-syntax bottom (make-rename-transformer #'Bottom))
-(define-syntax bottom? (make-rename-transformer #'Bottom?))
-(define-syntax bottom-message (make-rename-transformer #'Bottom-message))
 
 (define-type Value (Rec Value (U Flonum Boolean Null (Pair Value Value) Omega Trace tagged-value)))
 (define-type Maybe-Value (U Value Bottom))

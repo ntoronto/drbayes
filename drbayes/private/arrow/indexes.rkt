@@ -1,7 +1,7 @@
 #lang typed/racket/base
 
 (require racket/list
-         "../set/tree-value.rkt"
+         "../set/indexed.rkt"
          "../set/real-set.rkt")
 
 (provide (all-defined-out))

@@ -9,6 +9,7 @@
          "pair-set.rkt"
          "tree-set.rkt"
          "tree-value.rkt"
+         "bottom.rkt"
          "extremal-set.rkt"
          "union.rkt"
          "value.rkt"

@@ -201,24 +201,22 @@
 (: branch/bot* Bot*-Arrow)
 (define branch/bot*
   (λ: ([j : Tree-Index])
-    (let ([j  (reverse j)])
-      (λ: ([a : Value])
-        (match a
-          [(cons (cons (? omega?) (? trace? t)) _)  (trace-ref t j)]
-          [_  (proj-domain-fail 'branch a)])))))
+    (λ: ([a : Value])
+      (match a
+        [(cons (cons (? omega?) (? trace? t)) _)  (trace-ref t j)]
+        [_  (proj-domain-fail 'branch a)]))))
 
 (: branch/pre (Tree-Index -> Pre-Arrow))
 (define (branch/pre j)
-  (let ([j  (reverse j)])
-    (λ (A)
-      (define T (set-take-traces A))
-      (cond [(empty-set? T)  empty-pre-mapping]
-            [else  (define B (trace-set-proj T j))
-                   (cond [(empty-bool-set? B)  empty-pre-mapping]
-                         [else  (nonempty-pre-mapping
-                                 B (λ (B) (let ([T  (trace-set-unproj T j (set-take-bools B))])
-                                            (cond [(empty-trace-set? T)  empty-set]
-                                                  [else  T]))))])]))))
+  (λ (A)
+    (define T (set-take-traces A))
+    (cond [(empty-set? T)  empty-pre-mapping]
+          [else  (define B (trace-set-proj T j))
+                 (cond [(empty-bool-set? B)  empty-pre-mapping]
+                       [else  (nonempty-pre-mapping
+                               B (λ (B) (let ([T  (trace-set-unproj T j (set-take-bools B))])
+                                          (cond [(empty-trace-set? T)  empty-set]
+                                                [else  T]))))])])))
 
 (: branch/pre* Pre*-Arrow)
 (define branch/pre*
@@ -231,24 +229,22 @@
 (: random/bot* Bot*-Arrow)
 (define random/bot*
   (λ: ([j : Tree-Index])
-    (let ([j  (reverse j)])
-      (λ: ([a : Value])
-        (match a
-          [(cons (cons (? omega? r) (? trace?)) _)  (omega-ref r j)]
-          [_  (proj-domain-fail 'random a)])))))
+    (λ: ([a : Value])
+      (match a
+        [(cons (cons (? omega? r) (? trace?)) _)  (omega-ref r j)]
+        [_  (proj-domain-fail 'random a)]))))
 
 (: random/pre (Tree-Index -> Pre-Arrow))
 (define (random/pre j)
-  (let ([j  (reverse j)])
-    (λ (A)
-      (define R (set-take-omegas A))
-      (cond [(empty-set? R)  empty-pre-mapping]
-            [else  (define B (omega-set-proj R j))
-                   (cond [(empty-real-set? B)  empty-pre-mapping]
-                         [else  (nonempty-pre-mapping
-                                 B (λ (B) (let ([R  (omega-set-unproj R j (set-take-reals B))])
-                                            (cond [(empty-omega-set? R)  empty-set]
-                                                  [else  R]))))])]))))
+  (λ (A)
+    (define R (set-take-omegas A))
+    (cond [(empty-set? R)  empty-pre-mapping]
+          [else  (define B (omega-set-proj R j))
+                 (cond [(empty-real-set? B)  empty-pre-mapping]
+                       [else  (nonempty-pre-mapping
+                               B (λ (B) (let ([R  (omega-set-unproj R j (set-take-reals B))])
+                                          (cond [(empty-omega-set? R)  empty-set]
+                                                [else  R]))))])])))
 
 (: random/pre* Pre*-Arrow)
 (define random/pre*
@@ -257,7 +253,7 @@
 
 (: random/idx Idx-Arrow)
 (define (random/idx j)
-  (list (random-index (reverse j) #f)))
+  (list (random-index j #f)))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Random source boolean projections
@@ -280,23 +276,22 @@
 (define (boolean/pre p j)
   (cond [(and (p . > . 0.0) (p . < . 1.0))
          (define-values (It If) (boolean-preimage p))
-         (let ([j  (reverse j)])
-           (λ (A)
-             (define R (set-take-omegas A))
-             (define Rj (omega-set-proj R j))
-             (let ([It  (real-set-intersect It Rj)]
-                   [If  (real-set-intersect If Rj)])
-               (define-values (B I)
-                 (cond [(and (empty-real-set? It) (empty-real-set? If))
-                        (values empty-set empty-real-set)]
-                       [(empty-real-set? If)  (values trues It)]
-                       [(empty-real-set? It)  (values falses It)]
-                       [else  (values bools (real-set-union It If))]))
-               (pre-mapping B (λ (B)
-                                (let ([R  (cond [(eq? B trues)   (omega-set-unproj R j It)]
-                                                [(eq? B falses)  (omega-set-unproj R j If)]
-                                                [else  (omega-set-unproj R j I)])])
-                                  (if (empty-omega-set? R) empty-set R)))))))]
+         (λ (A)
+           (define R (set-take-omegas A))
+           (define Rj (omega-set-proj R j))
+           (let ([It  (real-set-intersect It Rj)]
+                 [If  (real-set-intersect If Rj)])
+             (define-values (B I)
+               (cond [(and (empty-real-set? It) (empty-real-set? If))
+                      (values empty-set empty-real-set)]
+                     [(empty-real-set? If)  (values trues It)]
+                     [(empty-real-set? It)  (values falses It)]
+                     [else  (values bools (real-set-union It If))]))
+             (pre-mapping B (λ (B)
+                              (let ([R  (cond [(eq? B trues)   (omega-set-unproj R j It)]
+                                              [(eq? B falses)  (omega-set-unproj R j If)]
+                                              [else  (omega-set-unproj R j I)])])
+                                (if (empty-omega-set? R) empty-set R))))))]
         [else
          (const/pre (p . >= . 1.0))]))
 
@@ -310,7 +305,7 @@
   (cond [(and (p . > . 0.0) (p . < . 1.0))
          (define-values (It If) (boolean-preimage p))
          (define split (make-constant-splitter (list It If)))
-         (λ (j) (list (random-index (reverse j) split)))]
+         (λ (j) (list (random-index j split)))]
         [else  any/idx]))
 
 ;; ===================================================================================================
@@ -417,6 +412,6 @@
 (: ifte*/idx (Idx-Arrow Idx-Arrow Idx-Arrow -> Idx-Arrow))
 (define ((ifte*/idx k1 k2 k3) j)
   (append (k1 (left j))
-          (list (ifte*-index (reverse j)
+          (list (ifte*-index j
                              (delay (k2 (left (right j))))
                              (delay (k3 (right (right j))))))))
