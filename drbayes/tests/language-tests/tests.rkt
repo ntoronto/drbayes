@@ -4,7 +4,7 @@
          math/distributions
          math/statistics
          math/flonum
-         drbayes
+         "../../main.rkt"
          "../test-utils.rkt"
          "normal-normal.rkt")
 
@@ -19,6 +19,7 @@
 (define point-alpha-scale (make-parameter 2))
 
 (interval-max-splits 0)
+(: n Natural)
 (define n 1000)
 
 (define/drbayes (normal/box-muller)
@@ -39,6 +40,7 @@
 
 #;; Preimage is ∅
 (begin
+  (set! n 150)
   (drbayes-always-terminate? #t) 
   (define/drbayes (loop) (if #t (loop) (loop)))
   (define/drbayes (e) (loop))
@@ -91,7 +93,6 @@
 #;; Geometric distribution (terminates with probability 1)
 (begin
   (interval-max-splits 0)
-  (drbayes-always-terminate? #t)
   
   (define/drbayes (geometric p)
     (if (< (random) p) 0 (+ 1 (geometric p))))
@@ -176,7 +177,7 @@
                              (g0 (list-ref x 1))
                              (g0 (list-ref x 2)))))
 
-;; Test: inversion
+#;; Test: inversion
 ;; Preimage is [0.25,0.5] x [0.25,0.5] x [0.25,0.5]
 (begin
   (define/drbayes (e) (list (random) (/ (random)) (/ (random))))
@@ -189,22 +190,25 @@
            (<= 2.0 x2) (<= x2 4.0)))))
 
 #;; Test: addition
-;; Preimage is a 2D downard diagonal strip
+;; Preimage is a 2D downward diagonal strip
 (begin
+  (set! n 10000)
   (interval-max-splits 5)
-  (define e (drbayes (+ (random) (random))))
-  (define B (real-set 0.3 0.7)))
+  (define/drbayes (e) (+ (random) (random)))
+  (define/drbayes (g x) (and (<= 0.3 x) (<= x 0.7))))
 
-#;; Test: same as above, with expressions
+#;; Test: same as above, with let
 (begin
+  (set! n 10000)
   (interval-max-splits 3)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let ([x  (random)]
           [y  (random)])
       (list x y (+ x y))))
   
-  (define B (set-list reals reals (real-set 0.3 0.7))))
+  (define/drbayes (g xs)
+    (and (<= 0.3 (list-ref xs 2)) (<= (list-ref xs 2) 0.7))))
 
 #;; Test: sign of normal-distributed random variable
 ;; Preimage should be:
@@ -212,10 +216,8 @@
 ;;    #f: [0.5,1]
 ;;  both: [0,1]
 (begin
-  (define e (drbayes (negative? (random-std-normal))))
-  (define B trues)
-  ;(define B falses)
-  ;(define B bools)
+  (define/drbayes (e) (negative? (random-std-normal)))
+  (define/drbayes (g x) x)
   )
 
 #;; Test: less than
@@ -225,32 +227,32 @@
 ;;  both: [0,1] × [0,1]
 (begin
   (interval-max-splits 3)
-  (define e (drbayes ((random) . < . (random))))
-  (define B trues)
-  ;(define B falses)
-  ;(define B bools)
+  (define/drbayes (e) (< (random) (random)))
+  ;(define/drbayes (g x) (equal? x #t))
+  ;(define/drbayes (g x) (equal? x #f))
+  (define/drbayes (g x) #t)
   )
 
 #;; Test: random boolean
 ;; Preimage should be [0,0.4)
 (begin
   (interval-max-splits 0)
-  (define e (drbayes (boolean (const 0.4))))
-  (define B trues))
+  (define/drbayes (e) (boolean (const 0.4)))
+  (define/drbayes (g x) x))
 
 #;; Test: simplest if
 ;; Preimage should be unrestricted
 (begin
   (interval-max-splits 0)
-  (define e (drbayes (if #t #t #f)))
-  (define B trues))
+  (define/drbayes (e) (if #t #t #f))
+  (define/drbayes (g x) x))
 
 #;; Test: simple if
 ;; Preimage should be [0,0.4]
 (begin
   (interval-max-splits 0)
-  (define e (drbayes (if (boolean (const 0.4)) #t #f)))
-  (define B trues))
+  (define/drbayes (e) (if (boolean (const 0.4)) #t #f))
+  (define/drbayes (g x) x))
 
 #;; Test: if
 ;; Preimage should be the union of a large upper triangle and a small lower triangle, and
@@ -258,51 +260,62 @@
 (begin
   (interval-max-splits 3)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let ([x  (random)]
           [y  (random)])
       ;(list x y (strict-if (< x y) #t (> x (scale y (const 8)))))
       (list x y (if (< x y) #t (> x (scale y (const 8)))))
       ))
-  (define B (set-list reals reals trues)))
+  (define/drbayes (g xs)
+    (list-ref xs 2)))
 
 #;; Test: Normal-Normals with different interval widths
 (begin
   (interval-max-splits 2)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let ([x  (normal 0 1)])
       (list x (normal x 1) (normal x 1))))
   
-  (define B (set-list reals (real-set 1.99 2.01) (real-set -1.2 -0.8)))
+  (define/drbayes (g xs)
+    (let ([x1  (list-ref xs 1)]
+          [x2  (list-ref xs 2)])
+      (and (<= 1.99 x1) (<= x1 2.01)
+           (<= -1.2 x2) (<= x2 -0.8))))
   
-  (normal-normal/lw 0 1 '(2.0 1.0) '(1.0 1.0)))
+  (normal-normal/lw 0 1 '(2.0 -1.0) '(1.0 1.0)))
 
 #;; Test: Normal-Normals with different noise instead of different widths
 (begin
+  (set! n 1000)
   (interval-max-splits 3)
   
-  (define/drbayes e
-    (let ([x  (normal 0 1)])
-      (list x
-            (normal (normal x 1) 0.2)
-            (normal (normal x 1) 0.01))))
+  (define/drbayes (e)
+    (let* ([x  (normal 0 1)]
+           [x1  (normal x 1)]
+           [x2  (normal x 1)])
+      (list x (normal x1 0.2) (normal x2 0.01))))
   
-  (define B (set-list reals (real-set 1.9999 2.0001) (real-set -1.0001 -0.9999)))
+  (define/drbayes (g xs)
+    (let ([x1  (list-ref xs 1)]
+          [x2  (list-ref xs 2)])
+      (and (<= 1.9999 x1) (<= x1 2.0001)
+           (<= -1.0001 x2) (<= x2 -0.9999))))
   
-  (normal-normal/lw 0 1 '(2.0 1.0) '(1.0 1.0)))
+  (normal-normal/lw 0 1 '(2.0 -1.0) '(1.0 1.0)))
 
 #;; Test: observing sum of normals
 (begin
   (interval-max-splits 0)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let* ([x  (normal 0 1)]
            [y1  (normal x 1)]
            [y2  (normal x 1)])
       (list x (+ y1 y2))))
   
-  (define B (set-list reals (real-set 1.9 2.1)))
+  (define/drbayes (g xs)
+    (and (<= 1.9 (list-ref xs 1)) (<= (list-ref xs 1) 2.1)))
   
   (normal-normal/lw 0 2 '(2.0) (list (flsqrt 2.0))))
 
@@ -406,30 +419,30 @@
                     (<= y (+ y* 0.001))))
              (condition (cdr ys) (cdr ys*)))))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let* ([a0  (cauchy 0 0.1)]
            [a1  (cauchy 0 0.1)]
            [a2  (cauchy 0 0.1)]
            [ys  (generate a0 a1 a2 (const xs))])
       (list a0 a1 a2 (condition ys (const ys*)))))
   
-  (define B (set-list reals reals reals trues))
+  (define/drbayes (g xs)
+    (list-ref xs 3))
   )
 
 #;; Dependency problem
 (begin
   (interval-max-splits 1)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let ([x  (random)]
           [y  (random)])
-      (/ 1 (+ 1 (/ y x)))
-      ;(/ x (+ x y))
-      #;
-      (let ([z  (/ x (+ x y))])
-        (strict-if (and (z . >= . 0) (z . <= . 1)) z (fail)))))
+      (/ x (+ x y))  ; has dependency problem
+      ;(/ 1 (+ 1 (/ y x)))  ; doesn't
+      ))
   
-  (define B (real-set 0.4 0.6)))
+  (define/drbayes (g x)
+    (and (<= 0.4 x) (<= x 0.6))))
 
 ;{ <x,z> in [0,1] × [0,2] : z - y = x }
 
@@ -474,153 +487,146 @@
                     (<= y (+ y* 0.001))))
              (condition (cdr ys) (cdr ys*)))))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (if (boolean (const 0.5))
         (let* ([a0  (cauchy 0 0.1)]
                [a1  (cauchy 0 0.1)]
                [a2  (cauchy 0 0.1)]
                [ys  (generate-quadratic a0 a1 a2 (const xs))])
-          (list #t (list a0 a1 a2) (condition ys ys*)))
+          (list #t (list a0 a1 a2) (condition ys (const ys*))))
         (let* ([a0  (cauchy 0 0.1)]
                [a1  (* -0.5 (log (random)))]
                [ys  (generate-exponential a0 a1 (const xs))])
-          (list #f (list a0 a1) (condition ys ys*)))))
+          (list #f (list a0 a1) (condition ys (const ys*))))))
   
-  (define B (set-list bools universe trues))
+  (define/drbayes (g xs)
+    (list-ref xs 2))
   )
 
 #;; Test: Box-Muller method for generating standard normal samples
 (begin
   (interval-max-splits 3)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let* ([x  (normal/box-muller)]
            [y  (+ x (normal/box-muller))])
       (list x y)))
   
-  (define B (set-list reals (real-set 1.8 2.2)))
+  (define/drbayes (g xs)
+    (and (<= 1.8 (list-ref xs 1)) (<= (list-ref xs 1) 2.2)))
   
   (rect-alpha-scale 1/2)
   )
 
-#;; Test: arithmetic
+#;; Test: multiplication
 (begin
   (interval-max-splits 4)
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let* ([x  (random-std-cauchy)]
            [y  (random-std-cauchy)])
       (list x y (* x y))))
   
-  (define B (set-list reals reals (real-set -0.1 0.2))))
+  (define/drbayes (g xs)
+    (and (<= -0.1 (list-ref xs 2))
+         (<= (list-ref xs 2) 0.2))))
 
 #;; Test: sqr
 ;; Preimage should look like the graph of the function
 (begin
   (interval-max-splits 1)
-  (define/drbayes e
+  
+  (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform 0 1)])
       (list x y (- y (sqr x)))))
-  (define B (set-list reals reals (real-set -0.1 0.1))))
+  
+  (define/drbayes (g xs)
+    (and (<= -0.1 (list-ref xs 2))
+         (<= (list-ref xs 2) 0.1))))
 
-#;;; Test: sine and cosine restricted to [-π,π]
+#;; Test: sine and cosine restricted to [-π,π]
 ;; Looked at top-down, the plots should look like the graphs of the functions
 (begin
   (interval-max-splits 1)
-  (define/drbayes e
+  
+  (define/drbayes (e)
     (let ([x  (uniform (const (- pi)) (const pi))]
           [y  (uniform -1.1 1.1)])
-      (list x y (- y (partial-cos x)))))
-  (define B (set-list reals reals (real-set -0.1 0.1))))
-#;
-(begin
-  (interval-max-splits 1)
-  (define/drbayes e
-    (let ([x  (uniform (const (- pi)) (const pi))]
-          [y  (uniform -1.1 1.1)])
-      (list x y (- y (partial-sin x)))))
-  (define B (set-list reals reals (real-set -0.1 0.1))))
+      (list x y
+            ;(- y (partial-cos x))
+            (- y (partial-sin x))
+            )))
+  
+  (define/drbayes (g xs)
+    (and (<= -0.1 (list-ref xs 2))
+         (<= (list-ref xs 2) 0.1))))
 
 #;; Test: asin and acos
 ;; Looked at top-down, the plots should look like the graphs of the functions
 (begin
   (interval-max-splits 1)
-  (define/drbayes e
+  #;
+  (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform 0 (const pi))])
       (list x y (- y (acos x)))))
-  (define B (set-list reals reals (real-set -0.1 0.1))))
-#;
-(begin
-  (interval-max-splits 1)
-  (define/drbayes e
+  
+  (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform (const (* -0.5 pi)) (const (* 0.5 pi)))])
       (list x y (- y (asin x)))))
-  (define B (set-list reals reals (real-set -0.1 0.1))))
+  
+  (define/drbayes (g xs)
+    (and (<= -0.1 (list-ref xs 2))
+         (<= (list-ref xs 2) 0.1))))
 
 #;; Test: Normal-Normal model
 ;; Preimage should be a banana shape
 (begin
-  (interval-max-splits 3)
+  (interval-max-splits 2)
   ;(interval-min-length (expt 0.5 1.0))
   
-  (define/drbayes e
-    (let* ([x  (normal 0 1)]
-           [y1  (normal x 1)]
-           [y2  (normal x 1)])
-      (list x y1 y2)))
-  (define B (set-list reals (real-set -1.2 -0.8) (real-set 1.99 2.01)))
-  (normal-normal/lw 0 1 '(2.0) '(1.0)))
-
-#;; Test: Normal-Normal model
-;; Preimage should be a banana shape
-(begin
-  (interval-max-splits 0)
-  ;(interval-min-length (expt 0.5 1.0))
-  
-  (define/drbayes e
+  (define/drbayes (e)
     (let* ([x  (normal 0 1)]
            [y  (normal x 1)])
       (list x (and (<= 1.9 y) (<= y 2.1)))))
-  (define B (set-list reals trues))
+  
+  (define/drbayes (g xs)
+    (list-ref xs 1))
+  
   (normal-normal/lw 0 1 '(2.0) '(1.0)))
 
 #;; Test: Normal-Normal with first variable floored
 (begin
   (interval-max-splits 2)
-  (define/drbayes e
+  
+  (define/drbayes (e)
     (let* ([x  (normal 0 8)]
            [y  (normal (floor x) 1)])
       (list x y)))
-  (define B (set-list reals (real-set -0.1 0.1))))
-
-#;
-(begin
-  (interval-max-splits 2)
-  (define/drbayes e
-    (let ([x  (random)]
-          [y  (random)])
-      (list x y (- x y))))
-  (define B (set-list reals reals (real-set -0.05 0.05))))
+  
+  (define/drbayes (g xs)
+    (and (<= -0.1 (list-ref xs 1))
+         (<= (list-ref xs 1) 0.1))))
 
 #;; Test: thermometer that goes to 100
 (begin
   (interval-max-splits 5)
   (interval-min-length 0.0)
-  (define e
-    (drbayes
-     (let* ([x  (normal 90 10)]
-            [y  (+ x (normal 0 1))])
-       (list x
-             (strict-if (y . > . 100) 100 (strict-if (y . < . 0) 0 y))
-             ;(if (y . > . 100) 100 y)
-             ))))
   
-  (define B (set-list reals (real-set 100.0 100.0))))
+  (define/drbayes (e)
+    (let* ([x  (normal 90 10)]
+           [y  (+ x (normal 0 1))])
+      (list x
+            (strict-if (y . > . 100) 100 (strict-if (y . < . 0) 0 y))
+            ;(if (y . > . 100) 100 y)
+            )))
+  
+  (define/drbayes (g xs)
+    (equal? (list-ref xs 1) 100)))
 
-#;; Test: Normal-Normal model with circular condition
+;; Test: Normal-Normal model with circular condition
 ;; Preimage should look like a football set up for a field goal
 (begin
   (interval-max-splits 3)
@@ -631,29 +637,14 @@
   (define/drbayes (hypot x y)
     (sqrt (+ (sqr x) (sqr y))))
   
-  (define/drbayes e
+  (define/drbayes (e)
     (let* ([x0  (normal 0 1)]
            [x1  (normal x0 1)])
       (list x0 x1 (hypot x0 x1))))
   
-  (define B (set-list reals reals (real-set 0.95 1.05))))
-
-#;
-(begin
-  (interval-max-splits 3)
-  
-  (define/drbayes (hypot x y)
-    (sqrt (+ (sqr x) (sqr y))))
-  
-  (define/drbayes e
-    (let* ([x0  (normal 0 1)]
-           [x1  (normal x0 1)]
-           [z   (hypot x0 x1)])
-      (list x0 x1 (and (z . > . 0.95) (z . < . 1.05)))))
-  
-  (define B (set-list reals
-                      reals
-                      trues)))
+  (define/drbayes (g xs)
+    (and (<= 0.95 (list-ref xs 2))
+         (<= (list-ref xs 2) 1.05))))
 
 #;; Test: random square, with obviously repeated variable in condition
 (begin
@@ -832,7 +823,7 @@
 
 (define-values (f h idxs)
   (match-let ([(meaning _ f h k)  (drbayes (e*))])
-    (values (run/bot* f '()) (run/pre* h '()) (k '()))))
+    (values (run/bot* f j0) (run/pre* h j0) (k j0))))
 
 (define (empty-set-error)
   (error 'drbayes-sample "cannot sample from the empty set"))
@@ -966,13 +957,13 @@
 
 (plot3d (list (points3d (map domain-sample->omega-point samples)
                         #:sym 'dot #:size 12
-                        #:alpha (* all-alpha (point-alpha-scale))
+                        #:alpha (min 1 (max 0 (* all-alpha (point-alpha-scale))))
                         #:color 3 #:fill-color 3
                         ;#:label "ω ∈ preimage g B"
                         )
               (points3d (map domain-sample->omega-point not-samples)
                         #:sym 'times #:size 5
-                        #:alpha (* all-alpha (point-alpha-scale))
+                        #:alpha (min 1 (max 0 (* all-alpha (point-alpha-scale))))
                         #:color 1 #:fill-color 1
                         ;#:label "ω ∉ preimage g B"
                         ))

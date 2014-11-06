@@ -188,10 +188,10 @@
 (define/drbayes (start-p)
   (const p0))
 
-(interval-max-splits 1)
+(interval-max-splits 0)
 ;(interval-min-length (expt 0.5 5.0))
 
-(define n 20000)
+(define n 2000)
 
 (define/drbayes (e)
   (let* ([ps  (trace-light (list (start-p)) (uniform-vec))]

@@ -66,7 +66,7 @@
 (: value->listof-flonum (Maybe-Value -> (Listof Flonum)))
 (define (value->listof-flonum v)
   (cond [(flonum? v)  (list v)]
-        [(boolean? v)  (list (if v (+ 0.9 (* 0.1 (random))) (* 0.1 (random))))]
+        [(boolean? v)  (list (if v 1.0 0.0))]
         [(pair? v)  (append (value->listof-flonum (car v))
                             (value->listof-flonum (cdr v)))]
         [(null? v)  (list)]

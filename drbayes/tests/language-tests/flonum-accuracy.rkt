@@ -454,10 +454,6 @@ The actual floating-point number lies somewhere in this interval.
         #:x-min 0 #:x-max 1
         #:y-min 0 #:y-max 1))
 
-(define-values (f h idxs)
-  (match-let ([(meaning _ f h k)  (drbayes (test-flgeom))])
-    (values (run/bot* f '()) (run/pre* h '()) (k '()))))
-
 #|
 (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
 (ap/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
