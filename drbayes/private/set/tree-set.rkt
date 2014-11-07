@@ -33,6 +33,66 @@
 (define-type Nonempty-Omega-Set (U Full-Omega-Set Nonextremal-Omega-Set))
 (define-type Omega-Set (U Empty-Omega-Set Full-Omega-Set Nonextremal-Omega-Set))
 
+(: omega-set-axis (-> Omega-Set Real-Set))
+(define (omega-set-axis Ω)
+  (cond [(empty-omega-set? Ω)  empty-real-set]
+        [(omegas? Ω)  reals]
+        [else  (define B (indexed-rect-value (Nonextremal-Omega-Set-rect Ω)))
+               (if (true? B) reals B)]))
+
+(: omega-set-left (-> Omega-Set Omega-Set))
+(define (omega-set-left Ω)
+  (cond [(empty-omega-set? Ω)  empty-omega-set]
+        [(omegas? Ω)  omegas]
+        [else  (let ([t  (indexed-rect-left (Nonextremal-Omega-Set-rect Ω))])
+                 (if (true? t) omegas (Nonextremal-Omega-Set t)))]))
+
+(: omega-set-right (-> Omega-Set Omega-Set))
+(define (omega-set-right Ω)
+  (cond [(empty-omega-set? Ω)  empty-omega-set]
+        [(omegas? Ω)  omegas]
+        [else  (let ([t  (indexed-rect-right (Nonextremal-Omega-Set-rect Ω))])
+                 (if (true? t) omegas (Nonextremal-Omega-Set t)))]))
+
+(: omega-set (-> Real-Set Omega-Set Omega-Set Omega-Set))
+(define (omega-set B Ω1 Ω2)
+  (cond [(or (empty-real-set? B) (empty-omega-set? Ω1) (empty-omega-set? Ω2))  empty-omega-set]
+        [(and (reals? B) (omegas? Ω1) (omegas? Ω2))  omegas]
+        [else  (Nonextremal-Omega-Set ((inst Indexed-Rect Nonextremal-Real-Set)
+                                       (if (reals? B) #t B)
+                                       (if (omegas? Ω1) #t (Nonextremal-Omega-Set-rect Ω1))
+                                       (if (omegas? Ω2) #t (Nonextremal-Omega-Set-rect Ω2))))]))
+
+(: omega-set-projs (-> Omega-Set (Values Real-Set Omega-Set Omega-Set)))
+(define (omega-set-projs Ω)
+  (cond [(empty-omega-set? Ω)  (values empty-real-set empty-omega-set empty-omega-set)]
+        [(omegas? Ω)  (values reals omegas omegas)]
+        [else  (match-define (Indexed-Rect B Ω1 Ω2) (Nonextremal-Omega-Set-rect Ω))
+               (values (if (true? B) reals B)
+                       (if (true? Ω1) omegas (Nonextremal-Omega-Set Ω1))
+                       (if (true? Ω2) omegas (Nonextremal-Omega-Set Ω2)))]))
+
+(: omega-set-unaxis (-> Omega-Set Real-Set Omega-Set))
+(define (omega-set-unaxis Ω B)
+  (cond [(or (empty-omega-set? Ω) (empty-real-set? B))  empty-omega-set]
+        [else
+         (define-values (B* Ω1 Ω2) (omega-set-projs Ω))
+         (omega-set (real-set-intersect B* B) Ω1 Ω2)]))
+
+(: omega-set-unleft (-> Omega-Set Omega-Set Omega-Set))
+(define (omega-set-unleft Ω Ω1)
+  (cond [(or (empty-omega-set? Ω) (empty-omega-set? Ω1))  empty-omega-set]
+        [else
+         (define-values (B Ω1* Ω2) (omega-set-projs Ω))
+         (omega-set B Ω1 #;(omega-set-intersect Ω1* Ω1) Ω2)]))
+
+(: omega-set-unright (-> Omega-Set Omega-Set Omega-Set))
+(define (omega-set-unright Ω Ω2)
+  (cond [(or (empty-omega-set? Ω) (empty-omega-set? Ω2))  empty-omega-set]
+        [else
+         (define-values (B Ω1 Ω2*) (omega-set-projs Ω))
+         (omega-set B Ω1 Ω2 #;(omega-set-intersect Ω2* Ω2))]))
+
 (: omega-set-member? (-> Omega-Set Omega Boolean))
 (define (omega-set-member? Ω ω)
   (cond [(empty-omega-set? Ω)  #f]
@@ -84,19 +144,19 @@
                                        (Nonextremal-Omega-Set-rect Ω2))]))
 
 (: omega-set-proj (case-> (Empty-Omega-Set Tree-Index -> Empty-Real-Set)
-                          (Full-Omega-Set Tree-Index -> Nonextremal-Real-Set)
-                          (Nonempty-Omega-Set Tree-Index -> Nonextremal-Real-Set)
-                          (Omega-Set Tree-Index -> Nonfull-Real-Set)))
+                          (Full-Omega-Set Tree-Index -> Full-Real-Set)
+                          (Nonempty-Omega-Set Tree-Index -> Nonempty-Real-Set)
+                          (Omega-Set Tree-Index -> Real-Set)))
 (define (omega-set-proj Ω j)
   (cond [(empty-omega-set? Ω)  empty-real-set]
-        [(omegas? Ω)   unit-interval]
+        [(omegas? Ω)   reals]
         [else  (define B (indexed-rect-ref (Nonextremal-Omega-Set-rect Ω) j))
-               (if (true? B) unit-interval B)]))
+               (if (true? B) reals B)]))
 
 (: omega-set-unproj (case-> (Empty-Omega-Set Tree-Index Real-Set -> Empty-Omega-Set)
                             (Omega-Set Tree-Index Empty-Real-Set -> Empty-Omega-Set)
                             (Full-Omega-Set Tree-Index Full-Real-Set -> Full-Omega-Set)
-                            ;(Full-Omega-Set Tree-Index Nonempty-Real-Set -> Nonempty-Omega-Set)
+                            (Full-Omega-Set Tree-Index Nonempty-Real-Set -> Nonempty-Omega-Set)
                             (Nonempty-Omega-Set Tree-Index Full-Real-Set -> Nonempty-Omega-Set)
                             (Nonfull-Omega-Set Tree-Index Real-Set -> Nonfull-Omega-Set)
                             (Omega-Set Tree-Index Nonfull-Real-Set -> Nonfull-Omega-Set)
@@ -106,18 +166,16 @@
         [(empty-real-set? B)   empty-omega-set]
         [(reals? B)  Ω]
         [else
-         (let ([B  (real-set-intersect B unit-interval)])
-           (cond
-             [(empty-real-set? B)  empty-omega-set]
-             [else
-              (define rect (indexed-rect-unproj (λ ([A1 : Nonextremal-Real-Set]
-                                                    [A2 : Nonextremal-Real-Set])
-                                                  (define A (real-set-intersect A1 A2))
-                                                  (if (empty-real-set? A) #f A))
-                                                (if (omegas? Ω) #t (Nonextremal-Omega-Set-rect Ω))
-                                                j
-                                                B))
-              (if rect (Nonextremal-Omega-Set rect) empty-omega-set)]))]))
+         (define rect (indexed-rect-unproj (λ ([B1 : Nonextremal-Real-Set]
+                                               [B2 : Nonextremal-Real-Set])
+                                             (define B (real-set-intersect B1 B2))
+                                             (if (empty-real-set? B) #f B))
+                                           (if (omegas? Ω) #t (Nonextremal-Omega-Set-rect Ω))
+                                           j
+                                           B))
+         (cond [(omegas? Ω)  (Nonextremal-Omega-Set (assert rect values))]
+               [rect  (Nonextremal-Omega-Set rect)]
+               [else  empty-omega-set])]))
 
 (: omega-set-sample-point (-> Nonempty-Omega-Set Omega))
 (define (omega-set-sample-point Ω)
@@ -150,6 +208,66 @@
 (define-type Nonfull-Trace-Set (U Empty-Trace-Set Nonextremal-Trace-Set))
 (define-type Nonempty-Trace-Set (U Full-Trace-Set Nonextremal-Trace-Set))
 (define-type Trace-Set (U Empty-Trace-Set Full-Trace-Set Nonextremal-Trace-Set))
+
+(: trace-set-axis (-> Trace-Set Bool-Set))
+(define (trace-set-axis T)
+  (cond [(empty-trace-set? T)  empty-bool-set]
+        [(traces? T)  bools]
+        [else  (define B (indexed-rect-value (Nonextremal-Trace-Set-rect T)))
+               (if (true? B) bools B)]))
+
+(: trace-set-left (-> Trace-Set Trace-Set))
+(define (trace-set-left T)
+  (cond [(empty-trace-set? T)  empty-trace-set]
+        [(traces? T)  traces]
+        [else  (let ([t  (indexed-rect-left (Nonextremal-Trace-Set-rect T))])
+                 (if (true? t) traces (Nonextremal-Trace-Set t)))]))
+
+(: trace-set-right (-> Trace-Set Trace-Set))
+(define (trace-set-right T)
+  (cond [(empty-trace-set? T)  empty-trace-set]
+        [(traces? T)  traces]
+        [else  (let ([t  (indexed-rect-right (Nonextremal-Trace-Set-rect T))])
+                 (if (true? t) traces (Nonextremal-Trace-Set t)))]))
+
+(: trace-set (-> Bool-Set Trace-Set Trace-Set Trace-Set))
+(define (trace-set B T1 T2)
+  (cond [(or (empty-bool-set? B) (empty-trace-set? T1) (empty-trace-set? T2))  empty-trace-set]
+        [(and (bools? B) (traces? T1) (traces? T2))  traces]
+        [else  (Nonextremal-Trace-Set ((inst Indexed-Rect Nonextremal-Bool-Set)
+                                       (if (bools? B) #t B)
+                                       (if (traces? T1) #t (Nonextremal-Trace-Set-rect T1))
+                                       (if (traces? T2) #t (Nonextremal-Trace-Set-rect T2))))]))
+
+(: trace-set-projs (-> Trace-Set (Values Bool-Set Trace-Set Trace-Set)))
+(define (trace-set-projs T)
+  (cond [(empty-trace-set? T)  (values empty-bool-set empty-trace-set empty-trace-set)]
+        [(traces? T)  (values bools traces traces)]
+        [else  (match-define (Indexed-Rect B T1 T2) (Nonextremal-Trace-Set-rect T))
+               (values (if (true? B) bools B)
+                       (if (true? T1) traces (Nonextremal-Trace-Set T1))
+                       (if (true? T2) traces (Nonextremal-Trace-Set T2)))]))
+
+(: trace-set-unaxis (-> Trace-Set Bool-Set Trace-Set))
+(define (trace-set-unaxis T B)
+  (cond [(or (empty-trace-set? T) (empty-bool-set? B))  empty-trace-set]
+        [else
+         (define-values (B* T1 T2) (trace-set-projs T))
+         (trace-set (bool-set-intersect B* B) T1 T2)]))
+
+(: trace-set-unleft (-> Trace-Set Trace-Set Trace-Set))
+(define (trace-set-unleft T T1)
+  (cond [(or (empty-trace-set? T) (empty-trace-set? T1))  empty-trace-set]
+        [else
+         (define-values (B T1* T2) (trace-set-projs T))
+         (trace-set B T1 #;(trace-set-intersect T1* T1) T2)]))
+
+(: trace-set-unright (-> Trace-Set Trace-Set Trace-Set))
+(define (trace-set-unright T T2)
+  (cond [(or (empty-trace-set? T) (empty-trace-set? T2))  empty-trace-set]
+        [else
+         (define-values (B T1 T2*) (trace-set-projs T))
+         (trace-set B T1 T2 #;(trace-set-intersect T2* T2))]))
 
 (: trace-set-member? (-> Trace-Set Trace Boolean))
 (define (trace-set-member? T t)

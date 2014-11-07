@@ -15,7 +15,7 @@
          "tree-set.rkt"
          "union.rkt")
 
-(define-type Value (Rec Value (U Flonum Boolean Null (Pair Value Value) Omega Trace tagged-value)))
+(define-type Value (Rec Value (U Flonum Boolean Null (Pair Value Value) tagged-value Omega Trace)))
 (define-type Maybe-Value (U Value Bottom))
 
 (struct: tagged-value Base-Value ([tag : Symbol] [value : Value]) #:transparent)

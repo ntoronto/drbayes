@@ -6,6 +6,7 @@
          "real-set.rkt"
          "null-set.rkt"
          "bool-set.rkt"
+         "indexed.rkt"
          "tree-set.rkt"
          "tree-value.rkt"
          "bottom.rkt"

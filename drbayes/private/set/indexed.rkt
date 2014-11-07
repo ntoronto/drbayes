@@ -2,7 +2,8 @@
 
 (require racket/promise
          racket/list
-         racket/match)
+         racket/match
+         "../untyped-utils.rkt")
 
 (provide (all-defined-out))
 
@@ -24,12 +25,20 @@
                            [right : (Promise (Indexed-Point V))])
   #:transparent)
 
+(: indexed-point-value (All (V) (-> (Indexed-Point V) V)))
+(: indexed-point-left (All (V) (-> (Indexed-Point V) (Indexed-Point V))))
+(: indexed-point-right (All (V) (-> (Indexed-Point V) (Indexed-Point V))))
+
+(define (indexed-point-value t) (force (Indexed-Point-value t)))
+(define (indexed-point-left t)  (force (Indexed-Point-left t)))
+(define (indexed-point-right t) (force (Indexed-Point-right t)))
+
 (: indexed-point-ref (All (V) (-> (Indexed-Point V) Tree-Index V)))
 (define (indexed-point-ref t j)
   (let loop ([t t] [j  (reverse j)])
-    (cond [(empty? j)  (force (Indexed-Point-value t))]
-          [(first j)  (loop (force (Indexed-Point-left t)) (rest j))]
-          [else       (loop (force (Indexed-Point-right t)) (rest j))])))
+    (cond [(empty? j)  (indexed-point-value t)]
+          [(first j)  (loop (indexed-point-left t) (rest j))]
+          [else       (loop (indexed-point-right t) (rest j))])))
 
 (: indexed-point->list (All (V) (-> (Indexed-Point V) (Listof V))))
 (define (indexed-point->list t)
@@ -50,14 +59,18 @@
                           [right : (U #t (Indexed-Rect N))])
   #:transparent)
 
-(: indexed-rect (All (N) (-> (U #t N)
-                             (U #t (Indexed-Rect N))
-                             (U #t (Indexed-Rect N))
+(: indexed-rect (All (N) (-> (U #t N) (U #t (Indexed-Rect N)) (U #t (Indexed-Rect N))
                              (U #t (Indexed-Rect N)))))
-(define (indexed-rect value left right)
-  (if (or value left right)
-      (Indexed-Rect value left right)
-      #t))
+(define (indexed-rect v l r)
+  (if (or v l r) (Indexed-Rect v l r) #t))
+
+(: indexed-rect-value (All (N) (-> (U #t (Indexed-Rect N)) (U #t N))))
+(: indexed-rect-left  (All (N) (-> (U #t (Indexed-Rect N)) (U #t (Indexed-Rect N)))))
+(: indexed-rect-right (All (N) (-> (U #t (Indexed-Rect N)) (U #t (Indexed-Rect N)))))
+
+(define (indexed-rect-value t) (if (true? t) #t (Indexed-Rect-value t)))
+(define (indexed-rect-left t)  (if (true? t) #t (Indexed-Rect-left t)))
+(define (indexed-rect-right t) (if (true? t) #t (Indexed-Rect-right t)))
 
 (: indexed-rect-ref (All (N) (-> (U #t (Indexed-Rect N)) Tree-Index (U #t N))))
 (define (indexed-rect-ref t j)
@@ -104,10 +117,9 @@
     (cond [(true? t1)  #t]
           [else
            (match-define (Indexed-Rect v1 l1 r1) t1)
-           (match-define (Indexed-Point v2 l2 r2) t2)
-           (and (if (true? v1) #t (member? v1 (force v2)))
-                (loop l1 (force l2))
-                (loop r1 (force r2)))])))
+           (and (if (true? v1) #t (member? v1 (indexed-point-value t2)))
+                (loop l1 (indexed-point-left t2))
+                (loop r1 (indexed-point-right t2)))])))
 
 (: indexed-rect-subseteq? (All (N) (-> (-> N N Boolean)
                                        (U #t (Indexed-Rect N))

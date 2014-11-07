@@ -12,14 +12,14 @@
 
 (provide (all-defined-out))
 
-(: drbayes-always-terminate? (Parameterof Boolean))
-(define drbayes-always-terminate? (make-parameter #f))
-
 (struct: bot-wrapper ([arrow : Bot-Arrow]) #:transparent)
-(struct: pre-wrapper ([arrow : Pre-Arrow]) #:transparent)
+(struct: bot*-arrow ([arrow : Bot-Arrow]) #:transparent)
 
-(define-type Bot*-Arrow (U bot-wrapper (Tree-Index -> Bot-Arrow)))
-(define-type Pre*-Arrow (U pre-wrapper (Tree-Index -> Pre-Arrow)))
+(struct: pre-wrapper ([arrow : Pre-Arrow]) #:transparent)
+(struct: pre*-arrow ([arrow : Pre-Arrow]) #:transparent)
+
+(define-type Bot*-Arrow (U bot-wrapper bot*-arrow))
+(define-type Pre*-Arrow (U pre-wrapper pre*-arrow))
 (define-type Idx-Arrow (Tree-Index -> Indexes))
 
 (: η/bot* (Bot-Arrow -> Bot*-Arrow))
@@ -28,23 +28,17 @@
 (: η/pre* (Pre-Arrow -> Pre*-Arrow))
 (define η/pre* pre-wrapper)
 
-(: force-η/bot* (Bot*-Arrow -> (Tree-Index -> Bot-Arrow)))
-(define (force-η/bot* k)
-  (cond [(bot-wrapper? k)  (λ (j) ((ref/bot 'snd) . >>>/bot . (bot-wrapper-arrow k)))]
-        [else  k]))
+(: run/bot* (Bot*-Arrow -> Bot-Arrow))
+(define (run/bot* k)
+  (if (bot-wrapper? k)
+      ((ref/bot 'snd) . >>>/bot . (bot-wrapper-arrow k))
+      (bot*-arrow-arrow k)))
 
-(: force-η/pre* (Pre*-Arrow -> (Tree-Index -> Pre-Arrow)))
-(define (force-η/pre* k)
-  (cond [(pre-wrapper? k)  (λ (j) ((ref/pre 'snd) . >>>/pre . (pre-wrapper-arrow k)))]
-        [else  k]))
-
-(: run/bot* (Bot*-Arrow Tree-Index -> Bot-Arrow))
-(define (run/bot* k j)
-  ((force-η/bot* k) j))
-
-(: run/pre* (Pre*-Arrow Tree-Index -> Pre-Arrow))
-(define (run/pre* k j)
-  ((force-η/pre* k) j))
+(: run/pre* (Pre*-Arrow -> Pre-Arrow))
+(define (run/pre* k)
+  (if (pre-wrapper? k)
+      ((ref/pre 'snd) . >>>/pre . (pre-wrapper-arrow k))
+      (pre*-arrow-arrow k)))
 
 (: any/idx Idx-Arrow)
 (define (any/idx j) '())
@@ -83,20 +77,20 @@
   (cond [(and (bot-wrapper? k1) (bot-wrapper? k2))
          (bot-wrapper ((bot-wrapper-arrow k1) . >>>/bot . (bot-wrapper-arrow k2)))]
         [else
-         (let ([k1  (force-η/bot* k1)]
-               [k2  (force-η/bot* k2)])
-           (λ: ([j : Tree-Index])
-             (((ref/bot 'fst) . &&&/bot . (k1 (left j))) . >>>/bot . (k2 (right j)))))]))
+         (bot*-arrow
+          (>>>/bot (&&&/bot (>>>/bot (ref/bot 'fst) store-right/bot)
+                            (>>>/bot (first/bot store-left/bot) (run/bot* k1)))
+                   (run/bot* k2)))]))
 
 (: >>>/pre* (Pre*-Arrow Pre*-Arrow -> Pre*-Arrow))
 (define (k1 . >>>/pre* . k2)
   (cond [(and (pre-wrapper? k1) (pre-wrapper? k2))
          (pre-wrapper ((pre-wrapper-arrow k1) . >>>/pre . (pre-wrapper-arrow k2)))]
         [else
-         (let ([k1  (force-η/pre* k1)]
-               [k2  (force-η/pre* k2)])
-           (λ: ([j : Tree-Index])
-             (((ref/pre 'fst) . &&&/pre . (k1 (left j))) . >>>/pre . (k2 (right j)))))]))
+         (pre*-arrow
+          (>>>/pre (&&&/pre (>>>/pre (ref/pre 'fst) store-right/pre)
+                            (>>>/pre (first/pre store-left/pre) (run/pre* k1)))
+                   (run/pre* k2)))]))
 
 (: >>>/idx (Idx-Arrow Idx-Arrow -> Idx-Arrow))
 (define ((>>>/idx k1 k2) j)
@@ -110,20 +104,18 @@
   (cond [(and (bot-wrapper? k1) (bot-wrapper? k2))
          (bot-wrapper ((bot-wrapper-arrow k1) . &&&/bot . (bot-wrapper-arrow k2)))]
         [else
-         (let ([k1  (force-η/bot* k1)]
-               [k2  (force-η/bot* k2)])
-           (λ: ([j : Tree-Index])
-             ((k1 (left j)) . &&&/bot . (k2 (right j)))))]))
+         (bot*-arrow
+          (&&&/bot (>>>/bot (first/bot store-left/bot) (run/bot* k1))
+                   (>>>/bot (first/bot store-right/bot) (run/bot* k2))))]))
 
 (: &&&/pre* (Pre*-Arrow Pre*-Arrow -> Pre*-Arrow))
 (define (k1 . &&&/pre* . k2)
   (cond [(and (pre-wrapper? k1) (pre-wrapper? k2))
          (pre-wrapper ((pre-wrapper-arrow k1) . &&&/pre . (pre-wrapper-arrow k2)))]
         [else
-         (let ([k1  (force-η/pre* k1)]
-               [k2  (force-η/pre* k2)])
-           (λ: ([j : Tree-Index])
-             ((k1 (left j)) . &&&/pre . (k2 (right j)))))]))
+         (pre*-arrow
+          (&&&/pre (>>>/pre (first/pre store-left/pre) (run/pre* k1))
+                   (>>>/pre (first/pre store-right/pre) (run/pre* k2))))]))
 
 (: &&&/idx (Idx-Arrow Idx-Arrow -> Idx-Arrow))
 (define ((&&&/idx k1 k2) j)
@@ -139,13 +131,10 @@
                                 (bot-wrapper-arrow k2)
                                 (bot-wrapper-arrow k3)))]
         [else
-         (let ([k1  (force-η/bot* k1)]
-               [k2  (force-η/bot* k2)]
-               [k3  (force-η/bot* k3)])
-           (λ: ([j : Tree-Index])
-             (ifte/bot (k1 (left j))
-                       (k2 (left (right j)))
-                       (k3 (right (right j))))))]))
+         (bot*-arrow
+          (ifte/bot (>>>/bot (first/bot store-left/bot) (run/bot* k1))
+                    (>>>/bot (first/bot (>>>/bot store-right/bot store-left/bot)) (run/bot* k2))
+                    (>>>/bot (first/bot (>>>/bot store-right/bot store-right/bot)) (run/bot* k3))))]))
 
 (: ifte/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> Pre*-Arrow))
 (define (ifte/pre* k1 k2 k3)
@@ -154,13 +143,10 @@
                                 (pre-wrapper-arrow k2)
                                 (pre-wrapper-arrow k3)))]
         [else
-         (let ([k1  (force-η/pre* k1)]
-               [k2  (force-η/pre* k2)]
-               [k3  (force-η/pre* k3)])
-           (λ: ([j : Tree-Index])
-             (ifte/pre (k1 (left j))
-                       (k2 (left (right j)))
-                       (k3 (right (right j))))))]))
+         (pre*-arrow
+          (ifte/pre (>>>/pre (first/pre store-left/pre) (run/pre* k1))
+                    (>>>/pre (first/pre (>>>/pre store-right/pre store-left/pre)) (run/pre* k2))
+                    (>>>/pre (first/pre (>>>/pre store-right/pre store-right/pre)) (run/pre* k3))))]))
 
 (: ifte/idx (Idx-Arrow Idx-Arrow Idx-Arrow -> Idx-Arrow))
 (define ((ifte/idx k1 k2 k3) j)
@@ -173,17 +159,14 @@
 
 (: lazy/bot* ((Promise Bot*-Arrow) -> Bot*-Arrow))
 (define (lazy/bot* k)
-  (λ: ([j : Tree-Index])
-    (lazy/bot (delay (run/bot* (force k) j)))))
+  (bot*-arrow (lazy/bot (delay (run/bot* (force k))))))
 
 (: lazy/pre* ((Promise Pre*-Arrow) -> Pre*-Arrow))
 (define (lazy/pre* k)
-  (λ: ([j : Tree-Index])
-    (lazy/pre (delay (run/pre* (force k) j)))))
+  (pre*-arrow (lazy/pre (delay (run/pre* (force k))))))
 
 (: lazy/idx ((Promise Idx-Arrow) -> Idx-Arrow))
-(define ((lazy/idx k) j)
-  ((force k) j))
+(define ((lazy/idx k) j) ((force k) j))
 
 ;; ===================================================================================================
 ;; Random source and branch trace projections
@@ -197,56 +180,56 @@
 
 (: branch/bot* Bot*-Arrow)
 (define branch/bot*
-  (λ: ([j : Tree-Index])
-    (λ: ([a : Value])
-      (match a
-        [(cons (cons (? omega?) (? trace? t)) _)  (trace-ref t j)]
-        [_  (proj-domain-fail 'branch a)]))))
+  (bot*-arrow
+   (λ: ([a : Value])
+     (match a
+       [(cons (cons (? omega?) (? trace? t)) _)  (trace-value t)]
+       [_  (proj-domain-fail 'branch/bot* a)]))))
 
-(: branch/pre (Tree-Index -> Pre-Arrow))
-(define (branch/pre j)
-  (λ (A)
-    (define T (set-take-traces A))
-    (cond [(empty-set? T)  empty-pre-mapping]
-          [else  (define B (trace-set-proj T j))
-                 (cond [(empty-bool-set? B)  empty-pre-mapping]
-                       [else  (nonempty-pre-mapping
-                               B (λ (B) (let ([T  (trace-set-unproj T j (set-take-bools B))])
-                                          (cond [(empty-trace-set? T)  empty-set]
-                                                [else  T]))))])])))
+(: branch/pre Pre-Arrow)
+(define (branch/pre A)
+  (define T (set-take-traces A))
+  (cond [(empty-set? T)  empty-pre-mapping]
+        [else  (define B (trace-set-axis T))
+               (cond [(empty-bool-set? B)  empty-pre-mapping]
+                     [else  (nonempty-pre-mapping
+                             B (λ (B) (let ([T  (trace-set-unaxis T (set-take-bools B))])
+                                        (cond [(empty-trace-set? T)  empty-set]
+                                              [else  T]))))])]))
 
 (: branch/pre* Pre*-Arrow)
 (define branch/pre*
-  (λ: ([j : Tree-Index])
-    ((ref/pre 'fst) . >>>/pre . ((ref/pre 'snd) . >>>/pre . (branch/pre j)))))
+  (pre*-arrow
+   ((ref/pre 'fst) . >>>/pre . ((ref/pre 'snd) . >>>/pre . branch/pre))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Random source projections
 
 (: random/bot* Bot*-Arrow)
 (define random/bot*
-  (λ: ([j : Tree-Index])
-    (λ: ([a : Value])
-      (match a
-        [(cons (cons (? omega? r) (? trace?)) _)  (omega-ref r j)]
-        [_  (proj-domain-fail 'random a)]))))
+  (bot*-arrow
+   (λ: ([a : Value])
+     (match a
+       [(cons (cons (? omega? r) (? trace?)) _)  (omega-value r)]
+       [_  (proj-domain-fail 'random/bot* a)]))))
 
-(: random/pre (Tree-Index -> Pre-Arrow))
-(define (random/pre j)
-  (λ (A)
-    (define R (set-take-omegas A))
-    (cond [(empty-set? R)  empty-pre-mapping]
-          [else  (define B (omega-set-proj R j))
-                 (cond [(empty-real-set? B)  empty-pre-mapping]
-                       [else  (nonempty-pre-mapping
-                               B (λ (B) (let ([R  (omega-set-unproj R j (set-take-reals B))])
-                                          (cond [(empty-omega-set? R)  empty-set]
-                                                [else  R]))))])])))
+(: random/pre Pre-Arrow)
+(define (random/pre A)
+  (define R (set-take-omegas A))
+  (cond [(empty-set? R)  empty-pre-mapping]
+        [else  (define B (real-set-intersect unit-interval (omega-set-axis R)))
+               (cond [(empty-real-set? B)  empty-pre-mapping]
+                     [else  (nonempty-pre-mapping
+                             B (λ (B) (let ([R  (omega-set-unaxis R (real-set-intersect
+                                                                     unit-interval
+                                                                     (set-take-reals B)))])
+                                        (cond [(empty-omega-set? R)  empty-set]
+                                              [else  R]))))])]))
 
 (: random/pre* Pre*-Arrow)
 (define random/pre*
-  (λ: ([j : Tree-Index])
-    ((ref/pre 'fst) . >>>/pre . ((ref/pre 'fst) . >>>/pre . (random/pre j)))))
+  (pre*-arrow
+   ((ref/pre 'fst) . >>>/pre . ((ref/pre 'fst) . >>>/pre . random/pre))))
 
 (: random/idx Idx-Arrow)
 (define (random/idx j)
@@ -257,11 +240,11 @@
 
 (: boolean/bot* (Flonum -> Bot*-Arrow))
 (define (boolean/bot* p)
-  (λ: ([j : Tree-Index])
-    (define random (run/bot* random/bot* j))
-    (λ: ([a : Value])
-      (let ([b  (random a)])
-        (and (flonum? b) (b . < . p))))))
+  (define random (run/bot* random/bot*))
+  (bot*-arrow
+   (λ: ([a : Value])
+     (let ([b  (random a)])
+       (and (flonum? b) (b . < . p))))))
 
 (: boolean-preimage (Flonum -> (Values Nonextremal-Interval Nonextremal-Interval)))
 ;; Assumes p > 0.0 and p < 1.0
@@ -269,13 +252,13 @@
   (values (Nonextremal-Interval 0.0 p #t #f)
           (Nonextremal-Interval p 1.0 #t #t)))
 
-(: boolean/pre (Flonum Tree-Index -> Pre-Arrow))
-(define (boolean/pre p j)
+(: boolean/pre (Flonum -> Pre-Arrow))
+(define (boolean/pre p)
   (cond [(and (p . > . 0.0) (p . < . 1.0))
          (define-values (It If) (boolean-preimage p))
          (λ (A)
            (define R (set-take-omegas A))
-           (define Rj (omega-set-proj R j))
+           (define Rj (real-set-intersect unit-interval (omega-set-axis R)))
            (let ([It  (real-set-intersect It Rj)]
                  [If  (real-set-intersect If Rj)])
              (define-values (B I)
@@ -285,17 +268,17 @@
                      [(empty-real-set? It)  (values falses It)]
                      [else  (values bools (real-set-union It If))]))
              (pre-mapping B (λ (B)
-                              (let ([R  (cond [(eq? B trues)   (omega-set-unproj R j It)]
-                                              [(eq? B falses)  (omega-set-unproj R j If)]
-                                              [else  (omega-set-unproj R j I)])])
+                              (let ([R  (cond [(eq? B trues)   (omega-set-unaxis R It)]
+                                              [(eq? B falses)  (omega-set-unaxis R If)]
+                                              [else  (omega-set-unaxis R I)])])
                                 (if (empty-omega-set? R) empty-set R))))))]
         [else
          (const/pre (p . >= . 1.0))]))
 
 (: boolean/pre* (Flonum -> Pre*-Arrow))
 (define (boolean/pre* p)
-  (λ: ([j : Tree-Index])
-    ((ref/pre 'fst) . >>>/pre . ((ref/pre 'fst) . >>>/pre . (boolean/pre p j)))))
+  (pre*-arrow
+   ((ref/pre 'fst) . >>>/pre . ((ref/pre 'fst) . >>>/pre . (boolean/pre p)))))
 
 (: boolean/idx (Flonum -> Idx-Arrow))
 (define (boolean/idx p)
@@ -310,68 +293,19 @@
 
 (: ifte*/bot* (Bot*-Arrow Bot*-Arrow Bot*-Arrow -> Bot*-Arrow))
 (define (ifte*/bot* k1 k2 k3)
-  (λ: ([j : Tree-Index])
-    (define branch (run/bot* branch/bot* j))
-    (define f1 (run/bot* k1 (left j)))
-    (define f2 (run/bot* k2 (left (right j))))
-    (define f3 (run/bot* k3 (right (right j))))
-    (λ: ([a : Value])
-      (define b* (branch a))
-      (define b (f1 a))
-      (cond [(not (eq? b* b))  (bottom (delay (format "ifte*: expected ~a condition; got ~e" b* b)))]
-            [(eq? b #t)  (f2 a)]
-            [(eq? b #f)  (f3 a)]
-            [else  (bottom (delay (format "ifte*: expected boolean condition; got ~e" b)))]))))
+  (bot*-arrow
+   (ifte*/bot (run/bot* branch/bot*)
+              (>>>/bot (first/bot store-left/bot) (run/bot* k1))
+              (>>>/bot (first/bot (>>>/bot store-right/bot store-left/bot)) (run/bot* k2))
+              (>>>/bot (first/bot (>>>/bot store-right/bot store-right/bot)) (run/bot* k3)))))
 
-(: terminating-ifte*/pre (-> Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow))
-;; This direct translation from the paper ensures termination
-(define ((terminating-ifte*/pre hb h1 h2 h3) A)
-  (let ([hb  (hb A)]
-        [h1  (h1 A)])
-    (cond [(or (empty-pre-mapping? h1) (empty-pre-mapping? hb))  empty-pre-mapping]
-          [else
-           (match-define (nonempty-pre-mapping C1 p1) h1)
-           (match-define (nonempty-pre-mapping Cb pb) hb)
-           (define C (set-intersect C1 Cb))
-           (define Ct (set-intersect C trues))
-           (define Cf (set-intersect C falses))
-           (define A2 (if (empty-set? Ct) empty-set (set-intersect (p1 Ct) (pb Ct))))
-           (define A3 (if (empty-set? Cf) empty-set (set-intersect (p1 Cf) (pb Cf))))
-           (cond [(eq? Cb bools)  (define A (set-join A2 A3))
-                                  (nonempty-pre-mapping universe (λ (B) A))]
-                 [(eq? Cb trues)   (run/pre h2 A2)]
-                 [(eq? Cb falses)  (run/pre h3 A3)]
-                 [else  empty-pre-mapping])])))
-
-(: precise-ifte*/pre (-> Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow))
-;; A more precise ifte* combinator that can rule out branches using preimages computed by h1, but
-;; doesn't always ensure termination.
-;; Conjecture: if a program's interpretation as a bot* arrow terminates with probability 1, a pre*
-;; arrow interpretation that uses this approximation also terminates with probability 1.
-(define ((precise-ifte*/pre hb h1 h2 h3) A)
-  (let ([h1  (h1 A)])
-    (define A2 (ap/pre h1 trues))
-    (define A3 (ap/pre h1 falses))
-    (define hb2 (run/pre hb A2))
-    (define hb3 (run/pre hb A3))
-    (let ([A2  (set-intersect A2 (ap/pre hb2 trues))]
-          [A3  (set-intersect A3 (ap/pre hb3 falses))])
-      (cond [(and (empty-set? A2) (empty-set? A3))  empty-pre-mapping]
-            [(empty-set? A3)  (h2 A2)]
-            [(empty-set? A2)  (h3 A3)]
-            [else  (define A (set-join A2 A3))
-                   (nonempty-pre-mapping universe (λ (B) A))]))))
-
-(: ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> (Tree-Index -> Pre-Arrow)))
+(: ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> Pre*-Arrow))
 (define (ifte*/pre* k1 k2 k3)
-  (λ: ([j : Tree-Index])
-    ((if (drbayes-always-terminate?)
-         terminating-ifte*/pre
-         precise-ifte*/pre)
-     (run/pre* branch/pre* j)
-     (run/pre* k1 (left j))
-     (run/pre* k2 (left (right j)))
-     (run/pre* k3 (right (right j))))))
+  (pre*-arrow
+   (ifte*/pre (run/pre* branch/pre*)
+              (>>>/pre (first/pre store-left/pre) (run/pre* k1))
+              (>>>/pre (first/pre (>>>/pre store-right/pre store-left/pre)) (run/pre* k2))
+              (>>>/pre (first/pre (>>>/pre store-right/pre store-right/pre)) (run/pre* k3)))))
 
 (: ifte*/idx (Idx-Arrow Idx-Arrow Idx-Arrow -> Idx-Arrow))
 (define ((ifte*/idx k1 k2 k3) j)

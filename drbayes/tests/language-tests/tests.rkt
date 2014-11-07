@@ -610,23 +610,23 @@
     (and (<= -0.1 (list-ref xs 1))
          (<= (list-ref xs 1) 0.1))))
 
-#;; Test: thermometer that goes to 100
+;; Test: thermometer that goes to 100
 (begin
-  (interval-max-splits 5)
-  (interval-min-length 0.0)
+  (interval-max-splits 3)
+  ;(interval-min-length 0.0)
   
   (define/drbayes (e)
     (let* ([x  (normal 90 10)]
            [y  (+ x (normal 0 1))])
       (list x
-            (strict-if (y . > . 100) 100 (strict-if (y . < . 0) 0 y))
-            ;(if (y . > . 100) 100 y)
+            ;(strict-if (y . > . 100) 100 (strict-if (y . < . 0) 0 y))
+            (if (y . > . 100) 100 y)
             )))
   
   (define/drbayes (g xs)
     (equal? (list-ref xs 1) 100)))
 
-;; Test: Normal-Normal model with circular condition
+#;; Test: Normal-Normal model with circular condition
 ;; Preimage should look like a football set up for a field goal
 (begin
   (interval-max-splits 3)
@@ -823,7 +823,7 @@
 
 (define-values (f h idxs)
   (match-let ([(meaning _ f h k)  (drbayes (e*))])
-    (values (run/bot* f j0) (run/pre* h j0) (k j0))))
+    (values (run/bot* f) (run/pre* h) (k j0))))
 
 (define (empty-set-error)
   (error 'drbayes-sample "cannot sample from the empty set"))

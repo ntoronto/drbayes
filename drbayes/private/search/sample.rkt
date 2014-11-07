@@ -239,6 +239,8 @@
     [else
      (match-define (cons R T) S)
      (define I (omega-set-proj R j))
+     (unless (real-set-subseteq? I unit-interval)
+       (error 'build-search-tree/ivl "internal error: omega projection is ~a" I))
      (define-values (Is ls)
        (cond [(interval-list? I)  (define Is (interval-list-elements I))
                                   (values Is (map interval-measure Is))]
@@ -330,7 +332,7 @@
 (define (drbayes-sample e n)
   (define-values (f h idxs)
     (match-let ([(meaning _ f h k)  e])
-      (values (run/bot* f j0) (run/pre* h j0) (k j0))))
+      (values (run/bot* f) (run/pre* h) (k j0))))
   
   (define refine (preimage-refiner h universe))
   
