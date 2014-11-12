@@ -6,7 +6,7 @@
          "real-set.rkt"
          "null-set.rkt"
          "bool-set.rkt"
-         "tree-set.rkt"
+         "store-set.rkt"
          "extremal-set.rkt"
          "union.rkt"
          "value.rkt"
@@ -101,50 +101,65 @@
 (: set-take-pairs (Set -> Pair-Set))
 (define set-take-pairs (make-set-take-basic pair-set? pair-tag empty-pair-set pairs))
 
-(: set-take-omegas (Set -> Omega-Set))
-(define set-take-omegas (make-set-take-basic omega-set? omega-tag empty-omega-set omegas))
-
-(: set-take-traces (Set -> Trace-Set))
-(define set-take-traces (make-set-take-basic trace-set? trace-tag empty-trace-set traces))
+(: set-take-stores (Set -> Store-Set))
+(define set-take-stores (make-set-take-basic store-set? store-tag empty-store-set stores))
 
 ;; ===================================================================================================
-;; Pair ref and set
-
-(: set-proj-fst (Set -> Set))
-(define (set-proj-fst A)
-  (cond [(pairs? A)  universe]
-        [(Nonextremal-Pair-Set? A)  (Nonextremal-Pair-Set-fst A)]
-        [else  empty-set]))
-
-(: set-proj-snd (Set -> Set))
-(define (set-proj-snd A)
-  (cond [(pairs? A)  universe]
-        [(Nonextremal-Pair-Set? A)  (Nonextremal-Pair-Set-snd A)]
-        [else  empty-set]))
+;; Pair projection and unprojection
 
 (: set-projs (Set -> (Values Set Set)))
 (define (set-projs A)
-  (cond [(pairs? A)  (values universe universe)]
-        [(Nonextremal-Pair-Set? A)  (values (Nonextremal-Pair-Set-fst A)
-                                            (Nonextremal-Pair-Set-snd A))]
-        [else  (values empty-set empty-set)]))
+  (pair-set-projs (set-take-pairs A)))
 
-(: set-proj (Set Pair-Index -> Set))
+(: set-fst (-> Set Set))
+(define (set-fst A)
+  (pair-set-fst (set-take-pairs A)))
+
+(: set-snd (-> Set Set))
+(define (set-snd A)
+  (pair-set-snd (set-take-pairs A)))
+
+(: set-unfst (-> Set (-> Set Set)))
+(define ((set-unfst A) A1)
+  (let ([A  (pair-set-unfst (set-take-pairs A) A1)])
+    (if (empty-pair-set? A) empty-set A)))
+
+(: set-unsnd (-> Set (-> Set Set)))
+(define ((set-unsnd A) A2)
+  (let ([A  (pair-set-unsnd (set-take-pairs A) A2)])
+    (if (empty-pair-set? A) empty-set A)))
+
+(: set-proj (Set Natural -> Set))
 (define (set-proj A j)
   (let ([A  (set-take-pairs A)])
     (cond [(empty-pair-set? A)  empty-set]
-          [(eq? j 'fst)  (set-proj-fst A)]
-          [(eq? j 'snd)  (set-proj-snd A)]
-          [(zero? j)     (set-proj-fst A)]
-          [else  (set-proj (set-proj-snd A) (- j 1))])))
+          [(zero? j)     (pair-set-fst A)]
+          [else  (set-proj (pair-set-snd A) (- j 1))])))
 
-(: set-unproj (Set Pair-Index Set -> Set))
-(define (set-unproj A j B)
-  (let ([A  (set-take-pairs A)])
-    (cond [(or (empty-pair-set? A) (empty-set? B))  empty-set]
-          [else
-           (define-values (A1 A2) (set-projs A))
-           (cond [(eq? j 'fst)  (set-pair (set-intersect A1 B) A2)]
-                 [(eq? j 'snd)  (set-pair A1 (set-intersect A2 B))]
-                 [(zero? j)     (set-pair (set-intersect A1 B) A2)]
-                 [else  (set-pair A1 (set-unproj A2 (- j 1) B))])])))
+(: set-unproj (-> Set Natural (-> Set Set)))
+(define ((set-unproj A j) B)
+  (let loop ([A  (set-take-pairs A)] [j j])
+    (let ([A  (cond [(or (empty-pair-set? A) (empty-set? B))
+                     empty-pair-set]
+                    [(zero? j)
+                     (pair-set-unfst A B)]
+                    [else
+                     (define-values (A1 A2*) (pair-set-projs A))
+                     (let ([A2  (loop (set-take-pairs A2*) (- j 1))])
+                       (if (eq? A2 A2*) A (pair-set A1 A2)))])])
+      (if (empty-pair-set? A) empty-set A))))
+
+;; ===================================================================================================
+
+(: set-cache-key (-> Set Any))
+(define (set-cache-key A)
+  (cond [(empty-set? A)  'empty-set]
+        [(universe? A)   'universe]
+        [(bot-entry? A)
+         (bot-tag A)]
+        [(bot-union? A)
+         'bot-union]
+        [(top-entry? A)
+         (top-tag A)]
+        [(top-union? A)
+         'top-union]))

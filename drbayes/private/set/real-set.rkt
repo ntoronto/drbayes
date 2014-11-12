@@ -464,10 +464,11 @@
                                 (Nonfull-Real-Set Real-Set -> Nonfull-Real-Set)
                                 (Real-Set Real-Set -> Real-Set)))
   (define (real-set-intersect I1 I2)
-    (cond [(empty-real-set? I1)  I1]
-          [(empty-real-set? I2)  I2]
-          [(reals? I1)  I2]
+    (cond [(reals? I1)  I2]
           [(reals? I2)  I1]
+          [(eq? I1 I2)  I1]
+          [(empty-real-set? I1)  I1]
+          [(empty-real-set? I2)  I2]
           [(and (Nonextremal-Interval? I1) (Nonextremal-Interval? I2))  (interval-intersect I1 I2)]
           [else  (list->real-set
                   (interval-list-intersect (nonextremal-real-set->list I1)

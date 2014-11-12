@@ -1,11 +1,8 @@
 #lang typed/racket
 
-(require "../../private/set.rkt"
-         "../../private/untyped-utils.rkt"
-         "../../private/utils.rkt"
+(require drbayes/private/set
          "../random-sets/random-real-set.rkt"
          "../random-sets/random-bool-set.rkt"
-         "../test-utils.rkt"
          "set-properties.rkt")
 
 (printf "starting...~n")
@@ -17,7 +14,8 @@
         [(r . < . 0.2)  empty-pair-set]
         [else
          (let loop ()
-           (define A (pair-set (bot-basic (random-real-set)) (bot-basic (random-bool-set))))
+           (define A (pair-set (bot-basic (random-real-set))
+                               (bot-basic (random-bool-set))))
            (if (or (pairs? A) (empty-pair-set? A)) (loop) A))]))
 
 (: random-value (Pair-Set -> (Pair Flonum Boolean)))

@@ -1,7 +1,7 @@
 #lang typed/racket
 
-(require "../../private/arrow.rkt"
-         "../../private/set.rkt"
+(require drbayes/private/set
+         drbayes/private/arrow
          "../random-sets/random-real-set.rkt"
          "../random-sets/random-bool-set.rkt"
          "../test-utils.rkt")
@@ -27,8 +27,8 @@
 
 (: random-real-pair (Set -> (Pair Flonum Flonum)))
 (define (random-real-pair A)
-  (cons (random-real* (set-proj-fst A))
-        (random-real* (set-proj-snd A))))
+  (cons (random-real* (set-fst A))
+        (random-real* (set-snd A))))
 
 (: test-soundness (Symbol Bot-Arrow Pre-Arrow
                           (-> Nonempty-Set)
@@ -50,7 +50,7 @@
                    (format "~a: image failed: A = ~v; Y = ~v; a = ~v; b = ~v" name X Y a b)))
      
      (define B (random-range-set))
-     (define A (ap/pre h* B))
+     (define A (preimage/pre h* B))
      
      (unless (bottom? b)
        (check-prop (implies (set-member? B b) (set-member? A a))
@@ -76,33 +76,33 @@
 
 (define n 50000)
 
-(test-unary-op 'neg neg/bot neg/pre n)
-(test-unary-op 'exp exp/bot exp/pre n)
-(test-unary-op 'log log/bot log/pre n)
-(test-unary-op 'sqrt sqrt/bot sqrt/pre n)
-(test-unary-op 'asin asin/bot asin/pre n)
-(test-unary-op 'acos acos/bot acos/pre n)
-(test-unary-op 'floor floor/bot floor/pre n)
-(test-unary-op 'ceiling ceiling/bot ceiling/pre n)
-(test-unary-op 'round round/bot round/pre n)
-(test-unary-op 'truncate truncate/bot truncate/pre n)
-(test-unary-op 'cauchy cauchy/bot cauchy/pre n)
-(test-unary-op 'normal normal/bot normal/pre n)
-(test-unary-op 'abs abs/bot abs/pre n)
-(test-unary-op 'sqr sqr/bot sqr/pre n)
-(test-unary-op 'recip recip/bot recip/pre n)
+(test-unary-op 'neg (neg/bot) (neg/pre) n)
+(test-unary-op 'exp (exp/bot) (exp/pre) n)
+(test-unary-op 'log (log/bot) (log/pre) n)
+(test-unary-op 'sqrt (sqrt/bot) (sqrt/pre) n)
+(test-unary-op 'asin (asin/bot) (asin/pre) n)
+(test-unary-op 'acos (acos/bot) (acos/pre) n)
+(test-unary-op 'floor (floor/bot) (floor/pre) n)
+(test-unary-op 'ceiling (ceiling/bot) (ceiling/pre) n)
+(test-unary-op 'round (round/bot) (round/pre) n)
+(test-unary-op 'truncate (truncate/bot) (truncate/pre) n)
+(test-unary-op 'cauchy (cauchy/bot) (cauchy/pre) n)
+(test-unary-op 'normal (normal/bot) (normal/pre) n)
+(test-unary-op 'abs (abs/bot) (abs/pre) n)
+(test-unary-op 'sqr (sqr/bot) (sqr/pre) n)
+(test-unary-op 'recip (recip/bot) (recip/pre) n)
 
-(test-unary-pred 'negative? negative?/bot negative?/pre n)
-(test-unary-pred 'positive? positive?/bot positive?/pre n)
-(test-unary-pred 'nonpositive? nonpositive?/bot nonpositive?/pre n)
-(test-unary-pred 'nonnegative? nonnegative?/bot nonnegative?/pre n)
+(test-unary-pred 'negative? (negative?/bot) (negative?/pre) n)
+(test-unary-pred 'positive? (positive?/bot) (positive?/pre) n)
+(test-unary-pred 'nonpositive? (nonpositive?/bot) (nonpositive?/pre) n)
+(test-unary-pred 'nonnegative? (nonnegative?/bot) (nonnegative?/pre) n)
 
-(test-binary-op '+ +/bot +/pre n)
-(test-binary-op '- -/bot -/pre n)
-(test-binary-op '* */bot */pre n)
-(test-binary-op '/ //bot //pre n)
+(test-binary-op '+ (+/bot) (+/pre) n)
+(test-binary-op '- (-/bot) (-/pre) n)
+(test-binary-op '* (*/bot) (*/pre) n)
+(test-binary-op '/ (//bot) (//pre) n)
 
-(test-binary-pred '< </bot </pre n)
-(test-binary-pred '> >/bot >/pre n)
-(test-binary-pred '<= <=/bot <=/pre n)
-(test-binary-pred '>= >=/bot >=/pre n)
+(test-binary-pred '< (</bot) (</pre) n)
+(test-binary-pred '> (>/bot) (>/pre) n)
+(test-binary-pred '<= (<=/bot) (<=/pre) n)
+(test-binary-pred '>= (>=/bot) (>=/pre) n)

@@ -5,6 +5,8 @@
          math/flonum
          math/distributions
          "../set.rkt"
+         "types.rkt"
+         "cache.rkt"
          "pure-arrows.rkt"
          "preimage-mapping.rkt"
          "directed-rounding-flops.rkt")
@@ -15,7 +17,7 @@
 ;; ===================================================================================================
 ;; R -> R lifts
 
-(: real/bot (Symbol Nonempty-Real-Set Nonempty-Real-Set (Flonum -> Flonum) -> Bot-Arrow))
+(: real/bot (Symbol Nonempty-Real-Set Nonempty-Real-Set (Flonum -> Flonum) -> (-> Bot-Arrow)))
 (define (real/bot name X Y f)
   (: arg-error (Value -> Bottom))
   (define (arg-error a)
@@ -25,14 +27,15 @@
   (define (res-error b)
     (bottom (delay (format "~a: expected result in ~e; produced ~e" name Y b))))
   
-  (λ (a)
-    (cond [(and (flonum? a) (real-set-member? X a))
-           (define b (f a))
-           (cond [(real-set-member? Y b)  b]
-                 [else
-                  (res-error b)])]
-          [else
-           (arg-error a)])))
+  (λ ()
+    (λ (a)
+      (cond [(and (flonum? a) (real-set-member? X a))
+             (define b (f a))
+             (cond [(real-set-member? Y b)  b]
+                   [else
+                    (res-error b)])]
+            [else
+             (arg-error a)]))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Strictly monotone (i.e. invertible)
@@ -52,11 +55,13 @@
                         Boolean
                         (Flonum -> Flonum) (Flonum -> Flonum)
                         (Flonum -> Flonum) (Flonum -> Flonum)
-                        -> Pre-Arrow))
-(define ((strict-monotone/pre X Y inc? f/rndd f/rndu g/rndd g/rndu) A)
-  (let ([A  (set-intersect A X)])
-    (pre-mapping (set-intersect Y (strict-monotone-apply inc? f/rndd f/rndu A))
-                 (λ (B) (set-intersect A (strict-monotone-apply inc? g/rndd g/rndu B))))))
+                        -> (-> Pre-Arrow)))
+(define ((strict-monotone/pre X Y inc? f/rndd f/rndu g/rndd g/rndu))
+  (make-pre-arrow/memo
+   (λ (A)
+     (let ([A  (set-intersect A X)])
+       (pre-mapping (set-intersect Y (strict-monotone-apply inc? f/rndd f/rndu A))
+                    (λ (B) (set-intersect A (strict-monotone-apply inc? g/rndd g/rndu B))))))))
 
 (: strict-monotone/prim (Symbol
                          Nonempty-Real-Set
@@ -65,7 +70,7 @@
                          Boolean
                          (Flonum -> Flonum) (Flonum -> Flonum)
                          (Flonum -> Flonum) (Flonum -> Flonum)
-                         -> (Values Bot-Arrow Pre-Arrow)))
+                         -> (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (strict-monotone/prim name X Y f inc? f/rndd f/rndu g/rndd g/rndu)
   (values (real/bot name X Y f)
           (strict-monotone/pre X Y inc? f/rndd f/rndu g/rndd g/rndu)))
@@ -82,11 +87,13 @@
                  Nonempty-Real-Set
                  (Nonempty-Interval -> Real-Set)
                  (Nonempty-Interval -> Real-Set)
-                 -> Pre-Arrow))
-(define ((monotone/pre X Y img pre) A)
-  (let ([A  (set-intersect A X)])
-    (pre-mapping (set-intersect Y (monotone-apply img A))
-                 (λ (B) (set-intersect A (monotone-apply pre B))))))
+                 -> (-> Pre-Arrow)))
+(define ((monotone/pre X Y img pre))
+  (make-pre-arrow/memo
+   (λ (A)
+     (let ([A  (set-intersect A X)])
+       (pre-mapping (set-intersect Y (monotone-apply img A))
+                    (λ (B) (set-intersect A (monotone-apply pre B))))))))
 
 (: monotone/prim (Symbol
                   Nonempty-Real-Set
@@ -94,7 +101,7 @@
                   (Flonum -> Flonum)
                   (Nonempty-Interval -> Real-Set)
                   (Nonempty-Interval -> Real-Set)
-                  -> (Values Bot-Arrow Pre-Arrow)))
+                  -> (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (monotone/prim name X Y f img pre)
   (values (real/bot name X Y f)
           (monotone/pre X Y img pre)))
@@ -103,29 +110,33 @@
 ;; R x R -> R lifts
 
 (: real2d/bot (Symbol Nonempty-Real-Set Nonempty-Real-Set Nonempty-Real-Set (Flonum Flonum -> Flonum)
-                      -> Bot-Arrow))
+                      -> (-> Bot-Arrow)))
 (define (real2d/bot name X1 X2 Y f)
   (: arg-error (Value -> Bottom))
   (define (arg-error a)
-    (bottom (delay (format "~a: expected argument in ~e; given ~e" name (set-pair X1 X2) a))))
+    (bottom (delay (format "~a: expected argument in ~e; given ~e"
+                           name
+                           (set-pair X1 X2)
+                           a))))
   
   (: res-error (Flonum -> Bottom))
   (define (res-error b)
     (bottom (delay (format "~a: expected result in ~e; produced ~e" name Y b))))
   
-  (λ (a)
-    (cond [(pair? a)
-           (define a1 (car a))
-           (define a2 (cdr a))
-           (cond [(and (flonum? a1) (flonum? a2) (real-set-member? X1 a1) (real-set-member? X2 a2))
-                  (define b (f a1 a2))
-                  (cond [(real-set-member? Y b)  b]
-                        [else
-                         (res-error b)])]
-                 [else
-                  (arg-error a)])]
-          [else
-           (arg-error a)])))
+  (λ ()
+    (λ (a)
+      (cond [(pair? a)
+             (define a1 (car a))
+             (define a2 (cdr a))
+             (cond [(and (flonum? a1) (flonum? a2) (real-set-member? X1 a1) (real-set-member? X2 a2))
+                    (define b (f a1 a2))
+                    (cond [(real-set-member? Y b)  b]
+                          [else
+                           (res-error b)])]
+                   [else
+                    (arg-error a)])]
+            [else
+             (arg-error a)]))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Strictly monotone
@@ -179,27 +190,29 @@
                           Boolean Boolean (Flonum Flonum -> Flonum) (Flonum Flonum -> Flonum)
                           Boolean Boolean (Flonum Flonum -> Flonum) (Flonum Flonum -> Flonum)
                           Boolean Boolean (Flonum Flonum -> Flonum) (Flonum Flonum -> Flonum)
-                          -> Pre-Arrow))
+                          -> (-> Pre-Arrow)))
 (define (strict-monotone2d/pre X1 X2 Y
                                fx? fy? f/rndd f/rndu
                                gz? gy? g/rndd g/rndu
                                hz? hx? h/rndd h/rndu)
   (define X (set-pair X1 X2))
-  (λ (A)
-    (let ([A  (set-intersect A X)])
-      (cond [(empty-set? A)  empty-pre-mapping]
-            [else  (pre-mapping (strict-monotone2d-image fx? fy? f/rndd f/rndu A Y)
-                                (λ (B) (strict-monotone2d-preimage gz? gy? g/rndd g/rndu
-                                                                   hz? hx? h/rndd h/rndu
-                                                                   A B)))]))))
-
+  (λ ()
+    (make-pre-arrow/memo
+     (λ (A)
+       (let ([A  (set-intersect A X)])
+         (cond [(empty-set? A)  empty-pre-mapping]
+               [else  (pre-mapping (strict-monotone2d-image fx? fy? f/rndd f/rndu A Y)
+                                   (λ (B) (strict-monotone2d-preimage gz? gy? g/rndd g/rndu
+                                                                      hz? hx? h/rndd h/rndu
+                                                                      A B)))]))))))
+  
 (: strict-monotone2d/prim (Symbol
                            Nonempty-Real-Set Nonempty-Real-Set Nonempty-Real-Set
                            (Flonum Flonum -> Flonum)
                            Boolean Boolean (Flonum Flonum -> Flonum) (Flonum Flonum -> Flonum)
                            Boolean Boolean (Flonum Flonum -> Flonum) (Flonum Flonum -> Flonum)
                            Boolean Boolean (Flonum Flonum -> Flonum) (Flonum Flonum -> Flonum)
-                           -> (Values Bot-Arrow Pre-Arrow)))
+                           -> (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (strict-monotone2d/prim name X1 X2 Y
                                 f
                                 fx? fy? f/rndd f/rndu
@@ -214,8 +227,8 @@
 ;; ===================================================================================================
 ;; Predicate lifts
 
-(: predicate/bot (Symbol (Value -> (U Bottom Boolean)) Nonempty-Set Nonempty-Set -> Bot-Arrow))
-(define ((predicate/bot name f Xt Xf) a)
+(: predicate/bot (Symbol (Value -> (U Bottom Boolean)) Nonempty-Set Nonempty-Set -> (-> Bot-Arrow)))
+(define (((predicate/bot name f Xt Xf)) a)
   (define b (f a))
   (cond [(bottom? b)  b]
         [(eq? b #t)  (cond [(set-member? Xt a)  #t]
@@ -226,20 +239,22 @@
                                                          name Xf a)))])]
         [else  (bottom (delay (format "~a: expected Boolean condition; given ~e" name b)))]))
 
-(: predicate/pre (Nonempty-Set Nonempty-Set -> Pre-Arrow))
-(define ((predicate/pre Xt Xf) A)
-  (define At (set-intersect A Xt))
-  (define Af (set-intersect A Xf))
-  (cond [(and (empty-set? At) (empty-set? Af))  empty-pre-mapping]
-        [(empty-set? Af)  (nonempty-pre-mapping trues  (λ (B) At))]
-        [(empty-set? At)  (nonempty-pre-mapping falses (λ (B) Af))]
-        [else   (define A (delay (set-join At Af)))
-                (nonempty-pre-mapping bools (λ (B) (cond [(trues? B)  At]
-                                                         [(falses? B)  Af]
-                                                         [else  (force A)])))]))
+(: predicate/pre (Nonempty-Set Nonempty-Set -> (-> Pre-Arrow)))
+(define ((predicate/pre Xt Xf))
+  (make-pre-arrow/memo
+   (λ (A)
+     (define At (set-intersect A Xt))
+     (define Af (set-intersect A Xf))
+     (cond [(and (empty-set? At) (empty-set? Af))  empty-pre-mapping]
+           [(empty-set? Af)  (nonempty-pre-mapping trues  (λ (B) At))]
+           [(empty-set? At)  (nonempty-pre-mapping falses (λ (B) Af))]
+           [else   (define A (delay (set-join At Af)))
+                   (nonempty-pre-mapping bools (λ (B) (cond [(trues? B)  At]
+                                                            [(falses? B)  Af]
+                                                            [else  (force A)])))]))))
 
 (: predicate/prim (Symbol (Value -> (U Bottom Boolean)) Nonempty-Set Nonempty-Set
-                          -> (Values Bot-Arrow Pre-Arrow)))
+                          -> (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (predicate/prim name f Xt Xf)
   (values (predicate/bot name f Xt Xf)
           (predicate/pre Xt Xf)))
@@ -247,30 +262,33 @@
 ;; ===================================================================================================
 ;; Equality lifts
 
-(: equal?/bot Bot-Arrow)
-(define (equal?/bot a)
+(: equal?/bot (-> Bot-Arrow))
+(define ((equal?/bot) a)
   (cond [(pair? a)  (equal? (car a) (cdr a))]
         [else  (bottom (delay (format "equal?: expected pair; given ~e" a)))]))
 
-(: equal?/pre Pre-Arrow)
-(define (equal?/pre A)
-  (define-values (A1 A2) (set-projs A))
-  (cond [(or (empty-set? A1) (empty-set? A2))  empty-pre-mapping]
-        [else
-         (nonempty-pre-mapping
-          #;; Method 1:
-          (if (set-equal? A1 A2)
-              (if (set-singleton? A1) trues bools)
-              (if (empty-set? (set-intersect A1 A2)) falses bools))
-          ;; Method 2:
-          (cond [(empty-set? (set-intersect A1 A2))  falses]
-                [(and (set-singleton? A1) (set-singleton? A2))  trues]
-                [else  bools])
-          (λ (B)
-            (cond [(set-member? B #f)  (pair-set A1 A2)]
-                  [(set-member? B #t)  (define A (set-intersect A1 A2))
-                                       (set-pair A A)]
-                  [else  empty-set])))]))
+(: equal?/pre (-> Pre-Arrow))
+(define (equal?/pre)
+  (define fun (make-pre-mapping-fun/memo))
+  (make-pre-arrow/memo
+   (λ (A)
+     (define-values (A1 A2) (set-projs A))
+     (cond [(or (empty-set? A1) (empty-set? A2))  empty-pre-mapping]
+           [else
+            (nonempty-pre-mapping
+             #;; Method 1:
+             (if (set-equal? A1 A2)
+                 (if (set-singleton? A1) trues bools)
+                 (if (empty-set? (set-intersect A1 A2)) falses bools))
+             ;; Method 2:
+             (cond [(empty-set? (set-intersect A1 A2))  falses]
+                   [(and (set-singleton? A1) (set-singleton? A2))  trues]
+                   [else  bools])
+             (fun (λ (B)
+                    (cond [(set-member? B #f)  (pair-set A1 A2)]
+                          [(set-member? B #t)  (define A (set-intersect A1 A2))
+                                               (set-pair A A)]
+                          [else  empty-set]))))]))))
 
 ;; ===================================================================================================
 ;; Tagged value lifts
@@ -282,7 +300,7 @@
 (define ((tag?/bot tag) a) (and (tagged-value? a) (eq? tag (tagged-value-tag a))))
 
 (: tag?/pre (Tag -> Pre-Arrow))
-(define (tag?/pre tag) (predicate/pre (bot-tagged tag universe) (top-tagged tag empty-set)))
+(define (tag?/pre tag) ((predicate/pre (bot-tagged tag universe) (top-tagged tag empty-set))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Tagging lifts
@@ -291,7 +309,8 @@
 (define ((tag/bot tag) a) (tagged-value tag a))
 
 (: tag/pre (Tag -> Pre-Arrow))
-(define ((tag/pre tag) A) (nonempty-pre-mapping (set-tag A tag) (λ (B) (set-untag B tag))))
+(define (tag/pre tag)
+  (make-pre-arrow/memo (λ (A) (nonempty-pre-mapping (set-tag A tag) (λ (B) (set-untag B tag))))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Untagging lifts
@@ -303,8 +322,8 @@
       (bottom (delay (format "expected ~a; given ~e" tag a)))))
 
 (: untag/pre (Tag -> Pre-Arrow))
-(define ((untag/pre tag) A)
-  (pre-mapping (set-untag A tag) (λ (B) (set-tag B tag))))
+(define (untag/pre tag)
+  (make-pre-arrow/memo (λ (A) (pre-mapping (set-untag A tag) (λ (B) (set-tag B tag))))))
 
 ;; ===================================================================================================
 ;; Primitive type predicate lifts
@@ -323,31 +342,31 @@
 (: scale/bot (Flonum -> Bot-Arrow))
 (define (scale/bot y)
   (cond [(fl= y 0.0)  (const/bot 0.0)]
-        [else  (real/bot 'scale reals reals (λ: ([x : Flonum]) (fl* x y)))]))
+        [else  ((real/bot 'scale reals reals (λ: ([x : Flonum]) (fl* x y))))]))
 
 (: scale/pre (Flonum -> Pre-Arrow))
 (define (scale/pre y)
   (cond [(fl= y 0.0)  (const/pre 0.0)]
-        [else  (strict-monotone/pre
-                reals reals
-                (y . fl> . 0.0)
-                (λ: ([x : Flonum]) (fl*/rndd x y))
-                (λ: ([x : Flonum]) (fl*/rndu x y))
-                (λ: ([z : Flonum]) (fl//rndd z y))
-                (λ: ([z : Flonum]) (fl//rndu z y)))]))
+        [else  ((strict-monotone/pre
+                 reals reals
+                 (y . fl> . 0.0)
+                 (λ: ([x : Flonum]) (fl*/rndd x y))
+                 (λ: ([x : Flonum]) (fl*/rndu x y))
+                 (λ: ([z : Flonum]) (fl//rndd z y))
+                 (λ: ([z : Flonum]) (fl//rndu z y))))]))
 
 (: translate/bot (Flonum -> Bot-Arrow))
 (define (translate/bot y)
-  (real/bot 'translate reals reals (λ: ([x : Flonum]) (fl+ x y))))
+  ((real/bot 'translate reals reals (λ: ([x : Flonum]) (fl+ x y)))))
 
 (: translate/pre (Flonum -> Pre-Arrow))
 (define (translate/pre y)
-  (strict-monotone/pre
-   reals reals #t
-   (λ: ([x : Flonum]) (fl+/rndd x y))
-   (λ: ([x : Flonum]) (fl+/rndu x y))
-   (λ: ([z : Flonum]) (fl-/rndd z y))
-   (λ: ([z : Flonum]) (fl-/rndu z y))))
+  ((strict-monotone/pre
+    reals reals #t
+    (λ: ([x : Flonum]) (fl+/rndd x y))
+    (λ: ([x : Flonum]) (fl+/rndu x y))
+    (λ: ([z : Flonum]) (fl-/rndd z y))
+    (λ: ([z : Flonum]) (fl-/rndu z y)))))
 
 (: flneg (Flonum -> Flonum))
 (define (flneg x) (fl* -1.0 x))
@@ -546,7 +565,7 @@
 ;; Inverse CDFs
 
 (: inverse-cdf/prim (Symbol Nonempty-Interval (Flonum -> Flonum) Index (Flonum -> Flonum) Index
-                            -> (Values Bot-Arrow Pre-Arrow)))
+                            -> (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (inverse-cdf/prim name Y inv-cdf inv-ulp-error cdf ulp-error)
   (define-values (a1 a2 _a1? _a2?) (interval-fields Y))
   (define-values (inv-cdf/rndd inv-cdf/rndu)
@@ -670,7 +689,7 @@
 ;; Real predicates
 
 (: real-predicate/prim (Symbol (Flonum -> Boolean) Nonempty-Real-Set Nonempty-Real-Set
-                               -> (Values Bot-Arrow Pre-Arrow)))
+                               -> (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (real-predicate/prim name p? At Af)
   (predicate/prim
    name
@@ -712,69 +731,69 @@
                        nonnegative-interval
                        negative-interval))
 
-(define </bot (>>>/bot -/bot negative?/bot))
-(define >/bot (>>>/bot -/bot positive?/bot))
-(define <=/bot (>>>/bot -/bot nonpositive?/bot))
-(define >=/bot (>>>/bot -/bot nonnegative?/bot))
+(define (</bot) (>>>/bot (-/bot) (negative?/bot)))
+(define (>/bot) (>>>/bot (-/bot) (positive?/bot)))
+(define (<=/bot) (>>>/bot (-/bot) (nonpositive?/bot)))
+(define (>=/bot) (>>>/bot (-/bot) (nonnegative?/bot)))
 
-(define </pre (>>>/pre -/pre negative?/pre))
-(define >/pre (>>>/pre -/pre positive?/pre))
-(define <=/pre (>>>/pre -/pre nonpositive?/pre))
-(define >=/pre (>>>/pre -/pre nonnegative?/pre))
+(define (</pre) (>>>/pre (-/pre) (negative?/pre)))
+(define (>/pre) (>>>/pre (-/pre) (positive?/pre)))
+(define (<=/pre) (>>>/pre (-/pre) (nonpositive?/pre)))
+(define (>=/pre) (>>>/pre (-/pre) (nonnegative?/pre)))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Nonmonotone functions
 
 ;; Absolute value
 (define abs/bot (real/bot 'abs reals nonnegative-interval flabs))
-(define abs/pre (ifte/pre negative?/pre neg/pre id/pre))
+(define (abs/pre) (ifte/pre (negative?/pre) (neg/pre) (id/pre)))
 
 ;; Square
 (define sqr/bot (real/bot 'sqr reals nonnegative-interval flsqr))
-(define sqr/pre (ifte/pre negative?/pre neg-sqr/pre pos-sqr/pre))
+(define (sqr/pre) (ifte/pre (negative?/pre) (neg-sqr/pre) (pos-sqr/pre)))
 
 ;; Reciprocal
 (define recip/bot (real/bot 'recip nonzero-reals nonzero-reals flrecip))
-(define recip/pre
-  (ifte/pre positive?/pre pos-recip/pre (ifte/pre negative?/pre neg-recip/pre fail/pre)))
+(define (recip/pre)
+  (ifte/pre (positive?/pre) (pos-recip/pre) (ifte/pre (negative?/pre) (neg-recip/pre) (fail/pre))))
 
 ;; Multiplication
 
 (define mul-domain (set-pair reals reals))
 (define */bot (real2d/bot '* reals reals reals fl*))
-(define */pre
-  (ifte/pre (>>>/pre (ref/pre 'fst) positive?/pre)
-            (ifte/pre (>>>/pre (ref/pre 'snd) positive?/pre)
-                      pos-pos-mul/pre
-                      (ifte/pre (>>>/pre (ref/pre 'snd) negative?/pre)
-                                pos-neg-mul/pre
-                                ((restrict/pre mul-domain) . >>>/pre . (const/pre 0.0))))
-            (ifte/pre (>>>/pre (ref/pre 'fst) negative?/pre)
-                      (ifte/pre (>>>/pre (ref/pre 'snd) positive?/pre)
-                                neg-pos-mul/pre
-                                (ifte/pre (>>>/pre (ref/pre 'snd) negative?/pre)
-                                          neg-neg-mul/pre
-                                          ((restrict/pre mul-domain) . >>>/pre . (const/pre 0.0))))
-                      ((restrict/pre mul-domain) . >>>/pre . (const/pre 0.0)))))
+(define (*/pre)
+  (ifte/pre (>>>/pre (fst/pre) (positive?/pre))
+            (ifte/pre (>>>/pre (snd/pre) (positive?/pre))
+                      (pos-pos-mul/pre)
+                      (ifte/pre (>>>/pre (snd/pre) (negative?/pre))
+                                (pos-neg-mul/pre)
+                                (>>>/pre (restrict/pre mul-domain) (const/pre 0.0))))
+            (ifte/pre (>>>/pre (fst/pre) (negative?/pre))
+                      (ifte/pre (>>>/pre (snd/pre) (positive?/pre))
+                                (neg-pos-mul/pre)
+                                (ifte/pre (>>>/pre (snd/pre) (negative?/pre))
+                                          (neg-neg-mul/pre)
+                                          (>>>/pre (restrict/pre mul-domain) (const/pre 0.0))))
+                      (>>>/pre (restrict/pre mul-domain) (const/pre 0.0)))))
 
 ;; Division
 
 (define div-domain (set-pair reals nonzero-reals))
 (define //bot (real2d/bot '/ reals nonzero-reals reals fl/))
-(define //pre
-  (ifte/pre (>>>/pre (ref/pre 'snd) positive?/pre)
-            (ifte/pre (>>>/pre (ref/pre 'fst) positive?/pre)
-                      pos-pos-div/pre
-                      (ifte/pre (>>>/pre (ref/pre 'fst) negative?/pre)
-                                neg-pos-div/pre
-                                ((restrict/pre div-domain) . >>>/pre . (const/pre 0.0))))
-            (ifte/pre (>>>/pre (ref/pre 'snd) negative?/pre)
-                      (ifte/pre (>>>/pre (ref/pre 'fst) positive?/pre)
-                                pos-neg-div/pre
-                                (ifte/pre (>>>/pre (ref/pre 'fst) negative?/pre)
-                                          neg-neg-div/pre
-                                          ((restrict/pre div-domain) . >>>/pre . (const/pre 0.0))))
-                      fail/pre)))
+(define (//pre)
+  (ifte/pre (>>>/pre (snd/pre) (positive?/pre))
+            (ifte/pre (>>>/pre (fst/pre) (positive?/pre))
+                      (pos-pos-div/pre)
+                      (ifte/pre (>>>/pre (fst/pre) (negative?/pre))
+                                (neg-pos-div/pre)
+                                (>>>/pre (restrict/pre div-domain) (const/pre 0.0))))
+            (ifte/pre (>>>/pre (snd/pre) (negative?/pre))
+                      (ifte/pre (>>>/pre (fst/pre) (positive?/pre))
+                                (pos-neg-div/pre)
+                                (ifte/pre (>>>/pre (fst/pre) (negative?/pre))
+                                          (neg-neg-div/pre)
+                                          (>>>/pre (restrict/pre div-domain) (const/pre 0.0))))
+                      (fail/pre))))
 
 #|
 Sine and cosine arrows are direct translations of the following Racket functions:
@@ -801,33 +820,35 @@ Sine and cosine arrows are direct translations of the following Racket functions
 
 ;; Cosine restricted to [-π,π]
 (define-syntax-rule (make-partial-cos >>> ifte mono-cos negative? neg)
-  (ifte negative? (>>> neg mono-cos) mono-cos))
+  (ifte (negative?) (>>> (neg) (mono-cos)) (mono-cos)))
 
 ;; Sine restricted to [-π/2,π]
 (define-syntax-rule (make-partial-pos-sin >>> ifte mono-sin translate nonpositive? neg fail)
-  (ifte (>>> (translate (* -0.5 pi)) nonpositive?)
-        mono-sin
+  (ifte (>>> (translate (* -0.5 pi)) (nonpositive?))
+        (mono-sin)
         (>>> (translate (- pi))
-             (ifte nonpositive?
-                   (>>> neg mono-sin)
-                   fail))))
+             (ifte (nonpositive?)
+                   (>>> (neg) (mono-sin))
+                   (fail)))))
 
 ;; Sine restricted to [-π,π]
 (define-syntax-rule (make-partial-sin >>> ifte partial-pos-sin negative? neg)
-  (ifte negative?
-        (>>> (>>> neg partial-pos-sin) neg)
-        partial-pos-sin))
+  (ifte (negative?)
+        (>>> (>>> (neg) (partial-pos-sin)) (neg))
+        (partial-pos-sin)))
 
-(define partial-cos/bot (make-partial-cos >>>/bot ifte/bot mono-cos/bot negative?/bot neg/bot))
-(define partial-cos/pre (make-partial-cos >>>/pre ifte/pre mono-cos/pre negative?/pre neg/pre))
+(define (partial-cos/bot) (make-partial-cos >>>/bot ifte/bot mono-cos/bot negative?/bot neg/bot))
+(define (partial-cos/pre) (make-partial-cos >>>/pre ifte/pre mono-cos/pre negative?/pre neg/pre))
 
-(define partial-pos-sin/bot
+(define (partial-pos-sin/bot)
   (make-partial-pos-sin >>>/bot ifte/bot
                         mono-sin/bot translate/bot nonpositive?/bot neg/bot fail/bot))
 
-(define partial-pos-sin/pre
+(define (partial-pos-sin/pre)
   (make-partial-pos-sin >>>/pre ifte/pre
                         mono-sin/pre translate/pre nonpositive?/pre neg/pre fail/pre))
 
-(define partial-sin/bot (make-partial-sin >>>/bot ifte/bot partial-pos-sin/bot negative?/bot neg/bot))
-(define partial-sin/pre (make-partial-sin >>>/pre ifte/pre partial-pos-sin/pre negative?/pre neg/pre))
+(define (partial-sin/bot)
+  (make-partial-sin >>>/bot ifte/bot partial-pos-sin/bot negative?/bot neg/bot))
+(define (partial-sin/pre)
+  (make-partial-sin >>>/pre ifte/pre partial-pos-sin/pre negative?/pre neg/pre))

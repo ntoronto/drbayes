@@ -4,6 +4,7 @@
          racket/flonum
          racket/match
          "../set.rkt"
+         "types.rkt"
          "pure-arrows.rkt"
          "pure-lifts.rkt")
 
@@ -19,11 +20,13 @@
 ;; ===================================================================================================
 ;; Basic lifts
 
-(define fail/proc (lower/proc fail/bot))
-(define id/proc (lower/proc id/bot))
+(define (fail/proc) (lower/proc (fail/bot)))
+(define (id/proc) (lower/proc (id/bot)))
 (define const/proc (λ: ([b : Value]) (lower/proc (const/bot b))))
 (define restrict/proc (λ: ([X : Nonempty-Set]) (lower/proc (restrict/bot X))))
-(define ref/proc (λ: ([j : Pair-Index]) (lower/proc (ref/bot j))))
+(define (fst/proc) (lower/proc (fst/bot)))
+(define (snd/proc) (lower/proc (snd/bot)))
+(define list-ref/proc (λ: ([j : Natural]) (lower/proc (list-ref/bot j))))
 
 ;; ===================================================================================================
 ;; Combinators
@@ -45,8 +48,8 @@
 
 (define ifte*/proc ifte/proc)
 
-(: random/proc Proc-Arrow)
-(define (random/proc a) (random))
+(: random/proc (-> Proc-Arrow))
+(define ((random/proc) a) (random))
 
 (: boolean/proc (Flonum -> Proc-Arrow))
 (define ((boolean/proc p) a) ((random) . < . p))
@@ -66,58 +69,58 @@
 
 (: let/proc (Proc-Arrow Proc-Arrow -> Proc-Arrow))
 (define (let/proc expr body)
-  ((expr . &&&/proc . id/proc) . >>>/proc . body))
+  ((expr . &&&/proc . (id/proc)) . >>>/proc . body))
 
 ;; ===================================================================================================
 ;; Other lifts
 
-(define equal?/proc (lower/proc equal?/bot))
+(define (equal?/proc) (lower/proc (equal?/bot)))
 
 (define tag?/proc (λ: ([tag : Tag]) (lower/proc (tag?/bot tag))))
 (define tag/proc (λ: ([tag : Tag]) (lower/proc (tag/bot tag))))
 (define untag/proc (λ: ([tag : Tag]) (lower/proc (untag/bot tag))))
 
-(define real?/proc real?)
-(define null?/proc null?)
-(define pair?/proc pair?)
-(define boolean?/proc boolean?)
+(define (real?/proc) (lower/proc (real?/bot)))
+(define (null?/proc) (lower/proc (null?/bot)))
+(define (pair?/proc) (lower/proc (pair?/bot)))
+(define (boolean?/proc) (lower/proc (boolean?/bot)))
 
 (define scale/proc (λ: ([y : Flonum]) (lower/proc (scale/bot y))))
 (define translate/proc (λ: ([y : Flonum]) (lower/proc (translate/bot y))))
-(define neg/proc (lower/proc neg/bot))
-(define exp/proc (lower/proc exp/bot))
-(define log/proc (lower/proc log/bot))
-(define sqrt/proc (lower/proc sqrt/bot))
-(define asin/proc (lower/proc asin/bot))
-(define acos/proc (lower/proc acos/bot))
-(define floor/proc (lower/proc floor/bot))
-(define ceiling/proc (lower/proc ceiling/bot))
-(define round/proc (lower/proc round/bot))
-(define truncate/proc (lower/proc truncate/bot))
+(define (neg/proc) (lower/proc (neg/bot)))
+(define (exp/proc) (lower/proc (exp/bot)))
+(define (log/proc) (lower/proc (log/bot)))
+(define (sqrt/proc) (lower/proc (sqrt/bot)))
+(define (asin/proc) (lower/proc (asin/bot)))
+(define (acos/proc) (lower/proc (acos/bot)))
+(define (floor/proc) (lower/proc (floor/bot)))
+(define (ceiling/proc) (lower/proc (ceiling/bot)))
+(define (round/proc) (lower/proc (round/bot)))
+(define (truncate/proc) (lower/proc (truncate/bot)))
 
-(define cauchy/proc (lower/proc cauchy/bot))
-(define normal/proc (lower/proc normal/bot))
+(define (cauchy/proc) (lower/proc (cauchy/bot)))
+(define (normal/proc) (lower/proc (normal/bot)))
 
-(define +/proc (lower/proc +/bot))
-(define -/proc (lower/proc -/bot))
+(define (+/proc) (lower/proc (+/bot)))
+(define (-/proc) (lower/proc (-/bot)))
 
-(define zero?/proc (lower/proc zero?/bot))
-(define negative?/proc (lower/proc negative?/bot))
-(define positive?/proc (lower/proc positive?/bot))
-(define nonpositive?/proc (lower/proc nonpositive?/bot))
-(define nonnegative?/proc (lower/proc nonnegative?/bot))
+(define (zero?/proc) (lower/proc (zero?/bot)))
+(define (negative?/proc) (lower/proc (negative?/bot)))
+(define (positive?/proc) (lower/proc (positive?/bot)))
+(define (nonpositive?/proc) (lower/proc (nonpositive?/bot)))
+(define (nonnegative?/proc) (lower/proc (nonnegative?/bot)))
 
-(define </proc (lower/proc </bot))
-(define >/proc (lower/proc >/bot))
-(define <=/proc (lower/proc <=/bot))
-(define >=/proc (lower/proc >=/bot))
+(define (</proc) (lower/proc (</bot)))
+(define (>/proc) (lower/proc (>/bot)))
+(define (<=/proc) (lower/proc (<=/bot)))
+(define (>=/proc) (lower/proc (>=/bot)))
 
-(define abs/proc (lower/proc abs/bot))
-(define sqr/proc (lower/proc sqr/bot))
-(define recip/proc (lower/proc recip/bot))
+(define (abs/proc) (lower/proc (abs/bot)))
+(define (sqr/proc) (lower/proc (sqr/bot)))
+(define (recip/proc) (lower/proc (recip/bot)))
 
-(define */proc (lower/proc */bot))
-(define //proc (lower/proc //bot))
+(define (*/proc) (lower/proc (*/bot)))
+(define (//proc) (lower/proc (//bot)))
 
-(define partial-cos/proc (lower/proc partial-cos/bot))
-(define partial-sin/proc (lower/proc partial-sin/bot))
+(define (partial-cos/proc) (lower/proc (partial-cos/bot)))
+(define (partial-sin/proc) (lower/proc (partial-sin/bot)))

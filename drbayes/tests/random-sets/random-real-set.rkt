@@ -1,7 +1,7 @@
 #lang typed/racket
 
 (require math/distributions
-         "../../private/set/real-set.rkt"
+         drbayes/private/set
          "../test-utils.rkt")
 
 (provide (all-defined-out))

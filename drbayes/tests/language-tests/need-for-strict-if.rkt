@@ -6,8 +6,8 @@
   (let ([x  (list (list #t #t #t (< (random) 0.5))
                   (list #t #t #t (< (random) 0.5))
                   (list #t #t #t (< (random) 0.5)))])
-    (;strict-if
-     if
+    (strict-if
+     ;if
      (equal? x (list (list #t #t #t #f)
                      (list #t #t #t #t)
                      (list #t #t #t #t)))

@@ -52,16 +52,16 @@
   (cond [(empty? xss)  (list empty)]
         [else  (cons-product (first xss) (list-product (rest xss)))]))
 
-(: omega-rect->plot-rects (Nonempty-Omega-Set -> (Listof (Listof ivl))))
-(define (omega-rect->plot-rects Ω)
+(: store-set->plot-rects (Nonempty-Store-Set -> (Listof (Listof ivl))))
+(define (store-set->plot-rects S)
   (map (λ: ([lst : (Listof ivl)])
          (maybe-pad-list lst 3 (λ () (ivl 0 1))))
        (list-product (map (λ: ([lst : (Listof ivl)]) (take lst (min (length lst) 3)))
-                          (map real-set->ivls (omega-set->list Ω))))))
+                          (map real-set->ivls (store-set-random-list S))))))
 
-(: omega->point (Omega -> (Listof Flonum)))
-(define (omega->point ω)
-  (maybe-pad-list (omega->list ω) 3 random))
+(: store->point (Store -> (Listof Flonum)))
+(define (store->point s)
+  (maybe-pad-list (store-random-list s) 3 random))
 
 (: value->listof-flonum (Maybe-Value -> (Listof Flonum)))
 (define (value->listof-flonum v)

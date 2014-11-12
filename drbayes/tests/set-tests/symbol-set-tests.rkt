@@ -1,7 +1,6 @@
 #lang typed/racket
 
-(require "../../private/set/symbol-set.rkt"
-         "../../private/set/extremal-set.rkt"
+(require drbayes/private/set/symbol-set
          "../random-sets/random-symbol-set.rkt"
          "set-properties.rkt")
 

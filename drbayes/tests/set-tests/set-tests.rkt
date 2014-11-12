@@ -1,11 +1,8 @@
 #lang typed/racket
 
-(require typed/rackunit
-         math/distributions
-         "../../private/set.rkt"
+(require drbayes/private/set
          "../random-sets/random-real-set.rkt"
-         "../random-sets/random-omega-set.rkt"
-         "../random-sets/random-trace-set.rkt"
+         "../random-sets/random-store-set.rkt"
          "../test-utils.rkt"
          "set-properties.rkt")
 
@@ -31,21 +28,17 @@
   (define A (set-pair (random-set) (random-set)))
   (if (empty-set? A) (random-bot-pair) A))
 
-(: random-bot-omega (-> Bot-Basic))
-(define random-bot-omega random-nonempty-omega-set)
-
-(: random-bot-trace (-> Bot-Basic))
-(define random-bot-trace random-nonempty-trace-set)
+(: random-bot-store (-> Bot-Basic))
+(define random-bot-store random-nonempty-store-set)
 
 (: random-bot-basic (-> Bot-Basic))
 (define (random-bot-basic)
   (define r (random))
-  (cond [(r . < . #i1/6)  (random-bot-real)]
-        [(r . < . #i2/6)  (random-bot-bool)]
-        [(r . < . #i3/6)  nulls]
-        [(r . < . #i4/6)  (random-bot-pair)]
-        [(r . < . #i5/6)  (random-bot-omega)]
-        [else             (random-bot-trace)]))
+  (cond [(r . < . #i1/5)  (random-bot-real)]
+        [(r . < . #i2/5)  (random-bot-bool)]
+        [(r . < . #i3/5)  nulls]
+        [(r . < . #i4/5)  (random-bot-pair)]
+        [else             (random-bot-store)]))
 
 (: random-top-real (-> Top-Basic))
 (define (random-top-real)
@@ -64,25 +57,19 @@
   (define A (pair-set (random-set) (random-set)))
   (if (pairs? A) (random-top-pair) (Top-Basic A)))
 
-(: random-top-omega (-> Top-Basic))
-(define (random-top-omega)
-  (define A (random-omega-set))
-  (if (omegas? A) (random-top-omega) (Top-Basic A)))
-
-(: random-top-trace (-> Top-Basic))
-(define (random-top-trace)
-  (define A (random-trace-set))
-  (if (traces? A) (random-top-trace) (Top-Basic A)))
+(: random-top-store (-> Top-Basic))
+(define (random-top-store)
+  (define A (random-store-set))
+  (if (stores? A) (random-top-store) (Top-Basic A)))
 
 (: random-top-basic (-> Top-Basic))
 (define (random-top-basic)
   (define r (random))
-  (cond [(r . < . #i1/6)  (random-top-real)]
-        [(r . < . #i2/6)  (random-top-bool)]
-        [(r . < . #i3/6)  not-nulls]
-        [(r . < . #i4/6)  (random-top-pair)]
-        [(r . < . #i5/6)  (random-top-omega)]
-        [else             (random-top-trace)]))
+  (cond [(r . < . #i1/5)  (random-top-real)]
+        [(r . < . #i2/5)  (random-top-bool)]
+        [(r . < . #i3/5)  not-nulls]
+        [(r . < . #i4/5)  (random-top-pair)]
+        [else             (random-top-store)]))
 
 (define a-tag (make-set-tag 'a))
 (define b-tag (make-set-tag 'b))
@@ -111,8 +98,7 @@
            (if ((random) . < . p) (list (random-bot-bool)) empty)
            (if ((random) . < . p) (list nulls) empty)
            (if ((random) . < . p) (list (random-bot-pair)) empty)
-           (if ((random) . < . p) (list (random-bot-omega)) empty)
-           (if ((random) . < . p) (list (random-bot-trace)) empty)
+           (if ((random) . < . p) (list (random-bot-store)) empty)
            (if ((random) . < . p) (list (Bot-Tagged a-tag (random-nonempty-set))) empty)
            (if ((random) . < . p) (list (Bot-Tagged b-tag (random-nonempty-set))) empty))))
   (if (or (empty? As) (empty? (rest As)))
@@ -127,8 +113,7 @@
            (if ((random) . < . p) (list (random-top-bool)) empty)
            (if ((random) . < . p) (list not-nulls) empty)
            (if ((random) . < . p) (list (random-top-pair)) empty)
-           (if ((random) . < . p) (list (random-top-omega)) empty)
-           (if ((random) . < . p) (list (random-top-trace)) empty)
+           (if ((random) . < . p) (list (random-top-store)) empty)
            (if ((random) . < . p) (list (Top-Tagged a-tag (random-nonfull-set))) empty)
            (if ((random) . < . p) (list (Top-Tagged b-tag (random-nonfull-set))) empty))))
   (if (or (empty? As) (empty? (rest As)))
@@ -177,8 +162,7 @@
         [(pairs? A)  (cons (random-universe-member) (random-universe-member))]
         [(pair-set? A)  (match-define (Nonextremal-Pair-Set A1 A2) A)
                         (cons (random-set-member A1) (random-set-member A2))]
-        [(omega-set? A)  (omega-set-sample-point A)]
-        [(trace-set? A)  (trace-set-sample-point A)]))
+        [(store-set? A)  (store-set-realize A)]))
 
 (: random-bot-basic-member (Bot-Basic -> Value))
 (define (random-bot-basic-member A)
@@ -209,8 +193,7 @@
             [(eq? tag bool-tag)  (if ((random) . < . 0.5) #t #f)]
             [(eq? tag null-tag)  null]
             [(eq? tag pair-tag)  (random-set-member pairs)]
-            [(eq? tag omega-tag)  (random-set-member omegas)]
-            [(eq? tag trace-tag)  (random-set-member traces)]
+            [(eq? tag store-tag)  (random-set-member stores)]
             [else  (loop)]))))
 
 (: random-top-tagged-member (Top-Tagged -> Value))
@@ -225,8 +208,7 @@
             [(eq? tag bool-tag)  (if ((random) . < . 0.5) #t #f)]
             [(eq? tag null-tag)  null]
             [(eq? tag pair-tag)  (random-set-member pairs)]
-            [(eq? tag omega-tag)  (random-set-member omegas)]
-            [(eq? tag trace-tag)  (random-set-member traces)]
+            [(eq? tag store-tag)  (random-set-member stores)]
             [else  (loop)]))))
 
 (: random-top-union-member (Top-Union -> Value))

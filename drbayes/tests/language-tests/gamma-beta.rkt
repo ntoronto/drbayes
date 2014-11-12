@@ -1,6 +1,6 @@
 #lang typed/racket
 
-(require "../../main.rkt")
+(require drbayes)
 
 (provide (all-defined-out))
 

@@ -1,10 +1,7 @@
 #lang typed/racket
 
 (require plot/typed
-         ;math/distributions
-         ;math/statistics
-         ;math/flonum
-         "../../main.rkt"
+         drbayes
          "../test-utils.rkt"
          )
 
@@ -456,10 +453,10 @@ The actual floating-point number lies somewhere in this interval.
 
 #|
 (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-(ap/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-        (float-set reals (real-set (* 3 epsilon.0) +inf.0)))
-(ap/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-        (float-any-set))
+(preimage/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
+              (float-set reals (real-set (* 3 epsilon.0) +inf.0)))
+(preimage/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
+              (float-any-set))
 (newline)
 
 
@@ -468,9 +465,9 @@ The actual floating-point number lies somewhere in this interval.
 
 (printf "flgeom*~n")
 (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-(ap/pre (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-        (float-set reals (real-set (* 3 epsilon.0) +inf.0)))
-(ap/pre (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-        (float-any-set))
+(preimage/pre (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
+              (float-set reals (real-set (* 3 epsilon.0) +inf.0)))
+(preimage/pre (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
+              (float-any-set))
 (newline)
 |#

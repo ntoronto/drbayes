@@ -4,7 +4,7 @@
          math/distributions
          math/statistics
          math/flonum
-         "../../main.rkt"
+         drbayes
          "../test-utils.rkt"
          "gamma-beta.rkt")
 

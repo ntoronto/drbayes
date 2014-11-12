@@ -11,11 +11,11 @@
          "bool-set.rkt"
          "null-set.rkt"
          "extremal-set.rkt"
-         "tree-value.rkt"
-         "tree-set.rkt"
+         "store.rkt"
+         "store-set.rkt"
          "union.rkt")
 
-(define-type Value (Rec Value (U Flonum Boolean Null (Pair Value Value) tagged-value Omega Trace)))
+(define-type Value (Rec Value (U Flonum Boolean Null (Pair Value Value) tagged-value Store)))
 (define-type Maybe-Value (U Value Bottom))
 
 (struct: tagged-value Base-Value ([tag : Symbol] [value : Value]) #:transparent)
@@ -26,8 +26,7 @@
         [(boolean? v)       #t]
         [(null? v)          #t]
         [(pair? v)          (and (value? (car v)) (value? (cdr v)))]
-        [(omega? v)         #t]
-        [(trace? v)         #t]
+        [(store? v)         #t]
         [(tagged-value? v)  (value? (tagged-value-value v))]))
 
 ;; ===================================================================================================
@@ -39,25 +38,31 @@
         [(boolean? v)       bool-tag]
         [(null? v)          null-tag]
         [(pair? v)          pair-tag]
-        [(omega? v)         omega-tag]
-        [(trace? v)         trace-tag]
+        [(store? v)         store-tag]
         [(tagged-value? v)  (tagged-value-tag v)]))
 
 ;; ===================================================================================================
-;; Ref
+;; Projections
 
-(: value-pair-ref (Value Pair-Index -> Maybe-Value))
-(define (value-pair-ref v j)
-  (cond [(pair? v)  (pair-ref v j)]
-        [else  (bottom (delay (format "value-pair-ref: expected Pair; given ~a" v)))]))
+(: value-fst (Value -> Maybe-Value))
+(define (value-fst v)
+  (cond [(pair? v)  (car v)]
+        [else  (bottom (delay (format "value-fst: expected pair; given ~e" v)))]))
 
-(: pair-ref ((Pair Value Value) Pair-Index -> Maybe-Value))
-(define (pair-ref x j)
-  (match-define (cons x1 x2) x)
-  (cond [(eq? j 'fst)  x1]
-        [(eq? j 'snd)  x2]
-        [(zero? j)     x1]
-        [else  (value-pair-ref x2 (- j 1))]))
+(: value-snd (Value -> Maybe-Value))
+(define (value-snd v)
+  (cond [(pair? v)  (cdr v)]
+        [else  (bottom (delay (format "value-snd: expected pair; given ~e" v)))]))
+
+(: value-list-ref (Value Natural -> Maybe-Value))
+(define (value-list-ref orig-v j)
+  (let loop ([v orig-v] [j j])
+    (cond [(null? v)
+           (bottom (delay (format "value-list-ref: index out of range; given ~e and ~e" orig-v j)))]
+          [(not (pair? v))
+           (bottom (delay (format "value-list-ref: expected list; given ~e" orig-v)))]
+          [(zero? j)  (car v)]
+          [else       (loop (cdr v) (- j 1))])))
 
 ;; ===================================================================================================
 ;; Singleton

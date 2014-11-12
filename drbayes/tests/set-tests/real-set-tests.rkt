@@ -1,6 +1,6 @@
 #lang typed/racket
 
-(require "../../private/set/real-set.rkt"
+(require drbayes/private/set
          "../random-sets/random-real-set.rkt"
          "set-properties.rkt")
 

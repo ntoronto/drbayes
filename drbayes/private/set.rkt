@@ -6,13 +6,13 @@
          "set/bool-set.rkt"
          "set/null-set.rkt"
          "set/extremal-set.rkt"
+         "set/store-index.rkt"
+         "set/store.rkt"
+         "set/store-set.rkt"
          "set/union.rkt"
          "set/value.rkt"
          "set/union-ops.rkt"
          "set/union-more-ops.rkt"
-         "set/indexed.rkt"
-         "set/tree-value.rkt"
-         "set/tree-set.rkt"
          )
 
 (provide (all-from-out
@@ -22,11 +22,11 @@
           "set/bool-set.rkt"
           "set/null-set.rkt"
           "set/extremal-set.rkt"
+          "set/store-index.rkt"
+          "set/store.rkt"
+          "set/store-set.rkt"
           "set/union.rkt"
           "set/value.rkt"
           "set/union-ops.rkt"
           "set/union-more-ops.rkt"
-          "set/indexed.rkt"
-          "set/tree-value.rkt"
-          "set/tree-set.rkt"
           ))

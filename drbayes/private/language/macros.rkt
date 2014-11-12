@@ -93,10 +93,10 @@
     #:description "zero-ary primitive operator"
     #:attributes (computation)
     #:literals (fail random random-std-normal random-std-cauchy)
-    (pattern fail #:attr computation #'fail/arr)
-    (pattern random #:attr computation #'random/arr)
-    (pattern random-std-normal #:attr computation #'(random/arr . >>>/arr . normal/arr))
-    (pattern random-std-cauchy #:attr computation #'(random/arr . >>>/arr . cauchy/arr))
+    (pattern fail #:attr computation #'(fail/arr))
+    (pattern random #:attr computation #'(random/arr))
+    (pattern random-std-normal #:attr computation #'((random/arr) . >>>/arr . (normal/arr)))
+    (pattern random-std-cauchy #:attr computation #'((random/arr) . >>>/arr . (cauchy/arr)))
     )
   
   (define-syntax-class 1ary-primitive
@@ -108,48 +108,48 @@
                   zero? negative? positive? nonnegative? nonpositive?
                   partial-cos partial-sin)
     (pattern + #:attr computation #'(restrict/arr reals))
-    (pattern - #:attr computation #'neg/arr)
+    (pattern - #:attr computation #'(neg/arr))
     (pattern * #:attr computation #'(restrict/arr reals))
-    (pattern / #:attr computation #'recip/arr)
-    (pattern car #:attr computation #'(ref/arr 'fst))
-    (pattern cdr #:attr computation #'(ref/arr 'snd))
-    (pattern real? #:attr computation #'real?/arr)
-    (pattern null? #:attr computation #'null?/arr)
-    (pattern pair? #:attr computation #'pair?/arr)
-    (pattern boolean? #:attr computation #'boolean?/arr)
-    (pattern exp #:attr computation #'exp/arr)
-    (pattern log #:attr computation #'log/arr)
-    (pattern abs #:attr computation #'abs/arr)
-    (pattern sqr #:attr computation #'sqr/arr)
-    (pattern sqrt #:attr computation #'sqrt/arr)
-    (pattern acos #:attr computation #'acos/arr)
-    (pattern asin #:attr computation #'asin/arr)
-    (pattern floor #:attr computation #'floor/arr)
-    (pattern ceiling #:attr computation #'ceiling/arr)
-    (pattern round #:attr computation #'round/arr)
-    (pattern truncate #:attr computation #'truncate/arr)
-    (pattern zero? #:attr computation #'zero?/arr)
-    (pattern negative? #:attr computation #'negative?/arr)
-    (pattern positive? #:attr computation #'positive?/arr)
-    (pattern nonnegative? #:attr computation #'nonnegative?/arr)
-    (pattern nonpositive? #:attr computation #'nonpositive?/arr)
-    (pattern partial-cos #:attr computation #'partial-cos/arr)
-    (pattern partial-sin #:attr computation #'partial-sin/arr)
+    (pattern / #:attr computation #'(recip/arr))
+    (pattern car #:attr computation #'(fst/arr))
+    (pattern cdr #:attr computation #'(snd/arr))
+    (pattern real? #:attr computation #'(real?/arr))
+    (pattern null? #:attr computation #'(null?/arr))
+    (pattern pair? #:attr computation #'(pair?/arr))
+    (pattern boolean? #:attr computation #'(boolean?/arr))
+    (pattern exp #:attr computation #'(exp/arr))
+    (pattern log #:attr computation #'(log/arr))
+    (pattern abs #:attr computation #'(abs/arr))
+    (pattern sqr #:attr computation #'(sqr/arr))
+    (pattern sqrt #:attr computation #'(sqrt/arr))
+    (pattern acos #:attr computation #'(acos/arr))
+    (pattern asin #:attr computation #'(asin/arr))
+    (pattern floor #:attr computation #'(floor/arr))
+    (pattern ceiling #:attr computation #'(ceiling/arr))
+    (pattern round #:attr computation #'(round/arr))
+    (pattern truncate #:attr computation #'(truncate/arr))
+    (pattern zero? #:attr computation #'(zero?/arr))
+    (pattern negative? #:attr computation #'(negative?/arr))
+    (pattern positive? #:attr computation #'(positive?/arr))
+    (pattern nonnegative? #:attr computation #'(nonnegative?/arr))
+    (pattern nonpositive? #:attr computation #'(nonpositive?/arr))
+    (pattern partial-cos #:attr computation #'(partial-cos/arr))
+    (pattern partial-sin #:attr computation #'(partial-sin/arr))
     )
   
   (define-syntax-class 2ary-primitive
     #:description "binary primitive operator"
     #:attributes (computation)
     #:literals (+ - * / < <= > >= equal?)
-    (pattern + #:attr computation #'+/arr)
-    (pattern - #:attr computation #'-/arr)
-    (pattern * #:attr computation #'*/arr)
-    (pattern / #:attr computation #'//arr)
-    (pattern < #:attr computation #'</arr)
-    (pattern > #:attr computation #'>/arr)
-    (pattern <= #:attr computation #'<=/arr)
-    (pattern >= #:attr computation #'>=/arr)
-    (pattern equal? #:attr computation #'equal?/arr)
+    (pattern + #:attr computation #'(+/arr))
+    (pattern - #:attr computation #'(-/arr))
+    (pattern * #:attr computation #'(*/arr))
+    (pattern / #:attr computation #'(//arr))
+    (pattern < #:attr computation #'(</arr))
+    (pattern > #:attr computation #'(>/arr))
+    (pattern <= #:attr computation #'(<=/arr))
+    (pattern >= #:attr computation #'(>=/arr))
+    (pattern equal? #:attr computation #'(equal?/arr))
     )
   
   (define-syntax-class n+1-ary-primitive
@@ -211,7 +211,7 @@
       (λ (stx)
         (cond [(current-dispatcher-id #'drbayes-dispatcher)
                (define d (syntax-parameter-value #'let-depth))
-               (define i (quasisyntax/loc stx (ref/arr #,(- d old-d))))
+               (define i (quasisyntax/loc stx (list-ref/arr #,(- d old-d))))
                (syntax-case stx () [(_ . args)  #`(#,i . args)] [_  i])]
               [else
                (raise-syntax-error 'drbayes "reference to DrBayes binding in Racket code" stx)])))]
@@ -220,8 +220,8 @@
       (λ (stx)
         (cond [(current-dispatcher-id #'drbayes-dispatcher)
                (define d (syntax-parameter-value #'let-depth))
-               (define i (quasisyntax/loc stx
-                           ((ref/arr #,(- d old-d)) . >>>/arr . (ref/arr #,idx))))
+               (define i (quasisyntax/loc stx (>>>/arr (list-ref/arr #,(- d old-d))
+                                                       (list-ref/arr #,idx))))
                (syntax-case stx () [(_ . args)  #`(#,i . args)] [_  i])]
               [else
                (raise-syntax-error 'drbayes "reference to DrBayes binding in Racket code" stx)])))]))
@@ -295,10 +295,10 @@
        (syntax/loc stx (interp (strict-if c0.cond c0.then (strict-cond c ... e))))]
       
       [(_ (list-ref e:expr i:exact-nonnegative-integer))
-       (syntax/loc stx ((interp e) . >>>/arr . (ref/arr i)))]
+       (syntax/loc stx ((interp e) . >>>/arr . (list-ref/arr i)))]
       
       [(_ (list-ref ~! e:expr (const i:expr)))
-       (syntax/loc stx ((interp e) . >>>/arr . (ref/arr (assert i exact-nonnegative-integer?))))]
+       (syntax/loc stx ((interp e) . >>>/arr . (list-ref/arr (assert i exact-nonnegative-integer?))))]
       
       [(_ (scale e:expr x:real))
        (syntax/loc stx ((interp e) . >>>/arr . (scale/arr (const x #'x))))]

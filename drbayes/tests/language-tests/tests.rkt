@@ -4,7 +4,7 @@
          math/distributions
          math/statistics
          math/flonum
-         "../../main.rkt"
+         drbayes
          "../test-utils.rkt"
          "normal-normal.rkt")
 
@@ -32,6 +32,30 @@
   (define/drbayes (e) #f)
   (define/drbayes (g e) (not e)))
 
+#;; Test: random
+;; Preimage is [0.25,0.5]
+(begin
+  (define/drbayes (e) (random))
+  (define/drbayes (g x) (and (<= 0.25 x) (<= x 0.5))))
+
+#;; Test: cons
+;; Preimage is [0.25,0.5] x [0.25,0.5]
+(begin
+  (interval-max-splits 1)
+  (define/drbayes (e) (cons (random) (random)))
+  (define/drbayes (g x)
+    (and (<= 0.25 (car x)) (<= (car x) 0.5)
+         (<= 0.25 (cdr x)) (<= (cdr x) 0.5))))
+
+#;; Test: lists
+;; Preimage is [0.25,0.5] x [0.25,0.5] x [0.25,0.5]
+(begin
+  (define/drbayes (e) (list (random) (random) (random)))
+  (define/drbayes (g0 x) (and (<= 0.25 x) (<= x 0.5)))
+  (define/drbayes (g x) (and (g0 (list-ref x 0))
+                             (g0 (list-ref x 1))
+                             (g0 (list-ref x 2)))))
+
 #;; Not well-defined (won't expand)
 (begin
   (define/drbayes (bad-loop) (bad-loop))
@@ -40,8 +64,8 @@
 
 #;; Preimage is ∅
 (begin
-  (set! n 150)
-  (drbayes-always-terminate? #t) 
+  (set! n 200)
+  (drbayes-always-terminate? #t)
   (define/drbayes (loop) (if #t (loop) (loop)))
   (define/drbayes (e) (loop))
   (define/drbayes (g e) #t))
@@ -80,6 +104,7 @@
 
 #;; Terminates with probability zero
 (begin
+  (set! n 200)
   (interval-max-splits 0)
   (drbayes-always-terminate? #t)
   
@@ -103,6 +128,8 @@
 
 #;; Always terminates with 0 or 1, but abstractly may not terminate
 (begin
+  (interval-max-splits 2)  ; more splits yields more samples
+  
   (define/drbayes (badfun x y)
     (if (x . < . y)
         (if (x . >= . y) (badfun x y) 0)
@@ -112,30 +139,6 @@
     (badfun (random) (random)))
   
   (define/drbayes (g x) #t))
-
-#;; Test: random
-;; Preimage is [0.25,0.5]
-(begin
-  (define/drbayes (e) (random))
-  (define/drbayes (g x) (and (<= 0.25 x) (<= x 0.5))))
-
-#;; Test: cons
-;; Preimage is [0.25,0.5] x [0.25,0.5]
-(begin
-  (interval-max-splits 1)
-  (define/drbayes (e) (cons (random) (random)))
-  (define/drbayes (g x)
-    (and (<= 0.25 (car x)) (<= (car x) 0.5)
-         (<= 0.25 (cdr x)) (<= (cdr x) 0.5))))
-
-#;; Test: lists
-;; Preimage is [0.25,0.5] x [0.25,0.5] x [0.25,0.5]
-(begin
-  (define/drbayes (e) (list (random) (random) (random)))
-  (define/drbayes (g0 x) (and (<= 0.25 x) (<= x 0.5)))
-  (define/drbayes (g x) (and (g0 (list-ref x 0))
-                             (g0 (list-ref x 1))
-                             (g0 (list-ref x 2)))))
 
 #;; Test: sqr
 ;; Preimage is [0.5,sqrt(1/2)]
@@ -287,14 +290,13 @@
 
 #;; Test: Normal-Normals with different noise instead of different widths
 (begin
-  (set! n 1000)
   (interval-max-splits 3)
   
   (define/drbayes (e)
     (let* ([x  (normal 0 1)]
            [x1  (normal x 1)]
            [x2  (normal x 1)])
-      (list x (normal x1 0.2) (normal x2 0.01))))
+      (list x (normal x1 0.01) (normal x2 0.2))))
   
   (define/drbayes (g xs)
     (let ([x1  (list-ref xs 1)]
@@ -437,8 +439,8 @@
   (define/drbayes (e)
     (let ([x  (random)]
           [y  (random)])
-      (/ x (+ x y))  ; has dependency problem
-      ;(/ 1 (+ 1 (/ y x)))  ; doesn't
+      ;(/ x (+ x y))  ; has dependency problem
+      (/ 1 (+ 1 (/ y x)))  ; doesn't
       ))
   
   (define/drbayes (g x)
@@ -554,8 +556,8 @@
     (let ([x  (uniform (const (- pi)) (const pi))]
           [y  (uniform -1.1 1.1)])
       (list x y
-            ;(- y (partial-cos x))
-            (- y (partial-sin x))
+            (- y (partial-cos x))
+            ;(- y (partial-sin x))
             )))
   
   (define/drbayes (g xs)
@@ -566,12 +568,12 @@
 ;; Looked at top-down, the plots should look like the graphs of the functions
 (begin
   (interval-max-splits 1)
-  #;
+  
   (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform 0 (const pi))])
       (list x y (- y (acos x)))))
-  
+  #;
   (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform (const (* -0.5 pi)) (const (* 0.5 pi)))])
@@ -620,11 +622,11 @@
            [y  (+ x (normal 0 1))])
       (list x
             ;(strict-if (y . > . 100) 100 (strict-if (y . < . 0) 0 y))
-            (if (y . > . 100) 100 y)
+            (if (y . > . 100) 100 (if (y . < . 0) 0 y))
             )))
   
   (define/drbayes (g xs)
-    (equal? (list-ref xs 1) 100)))
+    (>= (list-ref xs 1) 100)))
 
 #;; Test: Normal-Normal model with circular condition
 ;; Preimage should look like a football set up for a field goal
@@ -832,17 +834,14 @@
   (preimage-refiner h universe))
 
 (define S
-  (let ([S  (refine (cons omegas traces))])
-    (if (empty-set? S) (empty-set-error) S)))
-
-(match-define (cons R T) S)
+  (let ([S  (refine stores)])
+    (if (empty-store-set? S) (empty-set-error) S)))
 
 (printf "idxs = ~v~n" idxs)
-(printf "R = ~v~n" R)
-(printf "T = ~v~n" T)
+(printf "S = ~v~n" S)
 (newline)
 
-(struct: domain-sample ([S : Nonempty-Store-Rect]
+(struct: domain-sample ([S : Nonempty-Store-Set]
                         [s : Store]
                         [b : Maybe-Value]
                         [measure : Flonum]
@@ -920,7 +919,7 @@
         (sort
          (remove-duplicates
           (map (λ: ([d : domain-sample])
-                 (length (omega-set->list (car (domain-sample-S d)))))
+                 (length (store-set-random-list (domain-sample-S d))))
                all-samples))
          <))
 (newline)
@@ -953,7 +952,7 @@
 
 (: domain-sample->omega-point (domain-sample -> (Listof Flonum)))
 (define (domain-sample->omega-point d)
-  (omega->point (car (domain-sample-s d))))
+  (store->point (domain-sample-s d)))
 
 (plot3d (list (points3d (map domain-sample->omega-point samples)
                         #:sym 'dot #:size 12

@@ -1,18 +1,10 @@
 #lang typed/racket/base
 
 (require racket/list
-         "../set/indexed.rkt"
-         "../set/real-set.rkt")
+         "../set.rkt"
+         "types.rkt")
 
 (provide (all-defined-out))
-
-(define-type Interval-Splitter
-  (Nonempty-Interval -> (Values (Listof Nonempty-Interval) (Listof Positive-Flonum))))
-
-(define-type Indexes (Listof (U random-index ifte*-index)))
-(struct: random-index ([index : Tree-Index] [split : (U #f Interval-Splitter)]) #:transparent)
-(struct: ifte*-index ([index : Tree-Index] [true : (Promise Indexes)] [false : (Promise Indexes)])
-  #:transparent)
 
 (: intersect-and-filter ((Listof Nonempty-Interval) Nonempty-Interval
                                                     -> (Values (Listof Nonempty-Interval)

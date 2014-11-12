@@ -40,7 +40,7 @@
   (begin (define-drbayes-arrow-comp name) ...))
 
 (define-drbayes-arrow-comps >>> &&& ifte lazy)
-(define-drbayes-arrow-comps fail id restrict const ref)
+(define-drbayes-arrow-comps fail id restrict const fst snd list-ref)
 (define-drbayes-arrow-comps random boolean ifte*)
 (define-drbayes-arrow-comps null list apply let)
 (define-drbayes-arrow-comps equal? tag? tag untag)
