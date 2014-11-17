@@ -28,11 +28,11 @@
          quote null empty
          and or not
          car cdr real? null? pair? boolean?
-         exp log abs sqr sqrt acos asin
+         exp log expm1 log1p abs sqr sqrt acos asin
          floor ceiling
          zero? negative? positive? nonnegative? nonpositive?
          partial-cos partial-sin
-         cons + * - / < <= > >=
+         cons + * - / < <= > >= =
          list uniform normal cauchy
          const
          lazy
@@ -104,7 +104,7 @@
     #:attributes (computation)
     #:literals (+ - * /
                   car cdr real? null? pair? boolean?
-                  exp log abs sqr sqrt acos asin floor ceiling round truncate
+                  exp log expm1 log1p abs sqr sqrt acos asin floor ceiling round truncate
                   zero? negative? positive? nonnegative? nonpositive?
                   partial-cos partial-sin)
     (pattern + #:attr computation #'(restrict/arr reals))
@@ -119,6 +119,8 @@
     (pattern boolean? #:attr computation #'(boolean?/arr))
     (pattern exp #:attr computation #'(exp/arr))
     (pattern log #:attr computation #'(log/arr))
+    (pattern expm1 #:attr computation #'(expm1/arr))
+    (pattern log1p #:attr computation #'(log1p/arr))
     (pattern abs #:attr computation #'(abs/arr))
     (pattern sqr #:attr computation #'(sqr/arr))
     (pattern sqrt #:attr computation #'(sqrt/arr))
@@ -140,7 +142,7 @@
   (define-syntax-class 2ary-primitive
     #:description "binary primitive operator"
     #:attributes (computation)
-    #:literals (+ - * / < <= > >= equal?)
+    #:literals (+ - * / < <= > >= = equal?)
     (pattern + #:attr computation #'(+/arr))
     (pattern - #:attr computation #'(-/arr))
     (pattern * #:attr computation #'(*/arr))
@@ -149,6 +151,7 @@
     (pattern > #:attr computation #'(>/arr))
     (pattern <= #:attr computation #'(<=/arr))
     (pattern >= #:attr computation #'(>=/arr))
+    (pattern = #:attr computation #'(=/arr))
     (pattern equal? #:attr computation #'(equal?/arr))
     )
   

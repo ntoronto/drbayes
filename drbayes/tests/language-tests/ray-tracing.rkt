@@ -8,6 +8,11 @@
 
 (printf "starting...~n")
 
+(interval-max-splits 0)
+;(interval-min-length (expt 0.5 5.0))
+
+(define n 10000)
+
 (define/drbayes (vec+ lst1 lst2)
   (list (+ (list-ref lst1 0) (list-ref lst2 0))
         (+ (list-ref lst1 1) (list-ref lst2 1))
@@ -187,11 +192,6 @@
 
 (define/drbayes (start-p)
   (const p0))
-
-(interval-max-splits 0)
-;(interval-min-length (expt 0.5 5.0))
-
-(define n 50000)
 
 (define/drbayes (e)
   (let* ([ps  (trace-light (list (start-p)) (uniform-vec))]

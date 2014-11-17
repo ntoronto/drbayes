@@ -1,8 +1,6 @@
 #lang typed/racket/base
 
-(require racket/match
-         racket/promise
-         "../set.rkt"
+(require "../set.rkt"
          "pure-lifts.rkt"
          "prob-arrows.rkt")
 
@@ -90,9 +88,6 @@
 ;; ===================================================================================================
 ;; Real primitive lifts
 
-;; ---------------------------------------------------------------------------------------------------
-;; Monotone elementary R -> R functions
-
 (define scale/bot* (λ: ([y : Flonum]) (η/bot* (scale/bot y))))
 (define scale/pre* (λ: ([y : Flonum]) (η/pre* (scale/pre y))))
 (define scale/idx (λ: ([y : Flonum]) any/idx))
@@ -112,6 +107,14 @@
 (define (log/bot*) (η/bot* (log/bot)))
 (define (log/pre*) (η/pre* (log/pre)))
 (define (log/idx) any/idx)
+
+(define (expm1/bot*) (η/bot* (expm1/bot)))
+(define (expm1/pre*) (η/pre* (expm1/pre)))
+(define (expm1/idx) any/idx)
+
+(define (log1p/bot*) (η/bot* (log1p/bot)))
+(define (log1p/pre*) (η/pre* (log1p/pre)))
+(define (log1p/idx) any/idx)
 
 (define (sqrt/bot*) (η/bot* (sqrt/bot)))
 (define (sqrt/pre*) (η/pre* (sqrt/pre)))
@@ -149,8 +152,25 @@
 (define (normal/pre*) (η/pre* (normal/pre)))
 (define (normal/idx) any/idx)
 
-;; ---------------------------------------------------------------------------------------------------
-;; Monotone arithmetic R x R -> R functions
+(define (abs/bot*) (η/bot* (abs/bot)))
+(define (abs/pre*) (η/pre* (abs/pre)))
+(define (abs/idx) any/idx)
+
+(define (sqr/bot*) (η/bot* (sqr/bot)))
+(define (sqr/pre*) (η/pre* (sqr/pre)))
+(define (sqr/idx) any/idx)
+
+(define (recip/bot*) (η/bot* (recip/bot)))
+(define (recip/pre*) (η/pre* (recip/pre)))
+(define (recip/idx) any/idx)
+
+(define (partial-cos/bot*) (η/bot* (partial-cos/bot)))
+(define (partial-cos/pre*) (η/pre* (partial-cos/pre)))
+(define (partial-cos/idx) any/idx)
+
+(define (partial-sin/bot*) (η/bot* (partial-sin/bot)))
+(define (partial-sin/pre*) (η/pre* (partial-sin/pre)))
+(define (partial-sin/idx) any/idx)
 
 (define (+/bot*) (η/bot* (+/bot)))
 (define (+/pre*) (η/pre* (+/pre)))
@@ -160,8 +180,16 @@
 (define (-/pre*) (η/pre* (-/pre)))
 (define (-/idx) any/idx)
 
-;; ---------------------------------------------------------------------------------------------------
-;; Real predicates
+(define (*/bot*) (η/bot* (*/bot)))
+(define (*/pre*) (η/pre* (*/pre)))
+(define (*/idx) any/idx)
+
+(define (//bot*) (η/bot* (//bot)))
+(define (//pre*) (η/pre* (//pre)))
+(define (//idx) any/idx)
+
+;; ===================================================================================================
+;; Real predicate lifts
 
 (define (zero?/bot*) (η/bot* (zero?/bot)))
 (define (zero?/pre*) (η/pre* (zero?/pre)))
@@ -183,6 +211,9 @@
 (define (nonnegative?/pre*) (η/pre* (nonnegative?/pre)))
 (define (nonnegative?/idx) any/idx)
 
+;; ===================================================================================================
+;; Comparison lifts
+
 (define (</bot*) (η/bot* (</bot)))
 (define (</pre*) (η/pre* (</pre)))
 (define (</idx) any/idx)
@@ -199,33 +230,6 @@
 (define (>=/pre*) (η/pre* (>=/pre)))
 (define (>=/idx) any/idx)
 
-;; ---------------------------------------------------------------------------------------------------
-;; Nonmonotone functions
-
-(define (abs/bot*) (η/bot* (abs/bot)))
-(define (abs/pre*) (η/pre* (abs/pre)))
-(define (abs/idx) any/idx)
-
-(define (sqr/bot*) (η/bot* (sqr/bot)))
-(define (sqr/pre*) (η/pre* (sqr/pre)))
-(define (sqr/idx) any/idx)
-
-(define (recip/bot*) (η/bot* (recip/bot)))
-(define (recip/pre*) (η/pre* (recip/pre)))
-(define (recip/idx) any/idx)
-
-(define (*/bot*) (η/bot* (*/bot)))
-(define (*/pre*) (η/pre* (*/pre)))
-(define (*/idx) any/idx)
-
-(define (//bot*) (η/bot* (//bot)))
-(define (//pre*) (η/pre* (//pre)))
-(define (//idx) any/idx)
-
-(define (partial-cos/bot*) (η/bot* (partial-cos/bot)))
-(define (partial-cos/pre*) (η/pre* (partial-cos/pre)))
-(define (partial-cos/idx) any/idx)
-
-(define (partial-sin/bot*) (η/bot* (partial-sin/bot)))
-(define (partial-sin/pre*) (η/pre* (partial-sin/pre)))
-(define (partial-sin/idx) any/idx)
+(define (=/bot*) (η/bot* (=/bot)))
+(define (=/pre*) (η/pre* (=/pre)))
+(define (=/idx) any/idx)

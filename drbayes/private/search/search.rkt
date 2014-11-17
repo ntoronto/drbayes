@@ -3,6 +3,7 @@
 (require racket/match
          racket/list
          math/flonum
+         racket/promise
          "../utils.rkt"
          "../untyped-utils.rkt")
 
@@ -42,6 +43,17 @@
   #:transparent)
 
 (define-type (Search-Tree X) (U (search-leaf X) (search-node X)))
+
+(: search-tree-size (All (X) (-> (Search-Tree X) Natural)))
+(define (search-tree-size t)
+  (cond
+    [(search-node? t)
+     (match-define (search-node cs qs choice name) t)
+     (for/fold ([n : Natural  0]) ([c  (in-list cs)])
+       (if (or (not (promise? c)) (promise-forced? c))
+           (+ n (search-tree-size (maybe-force c)))
+           n))]
+    [else  1]))
 
 ;; ===================================================================================================
 ;; Nonadaptive, independent sampling

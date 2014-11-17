@@ -89,6 +89,17 @@
       (cos x)
       (raise-argument-error 'partial-cos "Real in [-π,π]" orig-x)))
 
+(: expm1 (Real -> Flonum))
+(define (expm1 orig-x)
+  (flexpm1 (fl orig-x)))
+
+(: log1p (Real -> Flonum))
+(define (log1p orig-x)
+  (define x (fl orig-x))
+  (if (and (x . >= . -1.0) (x . <= . +inf.0))
+      (fllog1p x)
+      (raise-argument-error 'log1p "Real in [-1,∞]" orig-x)))
+
 (define tag?
   (λ: ([v : Value] [t : Tag])
     (and (tagged-value? v) (eq? t (tagged-value-tag v)))))

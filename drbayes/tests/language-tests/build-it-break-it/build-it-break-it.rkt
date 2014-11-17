@@ -5,7 +5,7 @@
          math/statistics
          math/flonum
          drbayes
-         "../test-utils.rkt"
+         "../../test-utils.rkt"
          "gamma-beta.rkt")
 
 (printf "starting...~n")

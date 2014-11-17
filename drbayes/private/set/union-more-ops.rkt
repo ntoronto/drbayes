@@ -163,3 +163,10 @@
          (top-tag A)]
         [(top-union? A)
          'top-union]))
+
+(: real-set-map* (-> (-> Nonempty-Interval Set) Real-Set Set))
+(define (real-set-map* f I)
+  (cond [(empty-real-set? I)  empty-set]
+        [(reals? I)  (f I)]
+        [else  (define Is (map f (nonextremal-real-set->list I)))
+               (foldr set-join empty-set Is)]))

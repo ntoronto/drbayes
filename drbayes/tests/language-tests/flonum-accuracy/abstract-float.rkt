@@ -1,13 +1,11 @@
 #lang typed/racket
 
-(require plot/typed
-         drbayes
-         "../test-utils.rkt"
-         )
+(require drbayes)
 
-(printf "starting...~n")
+(provide (all-defined-out))
 
-(define epsilon.0 (expt 2.0 -52.0))
+;; Single-precision floating-point epsilon
+(define epsilon.f (expt 2.0 -24.0))
 
 ;; ===================================================================================================
 ;; A real-valued model of the floating point numbers
@@ -85,9 +83,6 @@ The actual floating-point number lies somewhere in this interval.
          [else
           (positive? vy)]))]))
 
-(define/drbayes (= x y)
-  (and (<= x y) (<= y x)))
-
 (define/drbayes (fl= x y)
   (cond
     [(float-any? x)  (boolean (const 0.5))]
@@ -140,7 +135,7 @@ The actual floating-point number lies somewhere in this interval.
          [(zero? vx)  (fl 0)]
          [else
           (make-float (sqrt vx)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          (- 1 (sqrt (- 1 ex)))))]))]))
 
 (define/drbayes (flsqr x)
@@ -153,7 +148,7 @@ The actual floating-point number lies somewhere in this interval.
          [(zero? vx)  (fl 0)]
          [else
           (make-float (sqr vx)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          (- (sqr (+ ex 1)) 1)))]))]))
 
 (define/drbayes (fllog x)
@@ -163,20 +158,20 @@ The actual floating-point number lies somewhere in this interval.
      (let ([vx  (float-value x)]
            [ex  (float-error x)])
        (cond
-         #;[(vx . = . 1)
-            (if (zero? ex) (fl 0) (float-any))]
+         [(vx . = . 1)
+          (if (zero? ex) (fl 0) (float-any))]
          [(vx . > . 1)
           (make-float (log vx)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          ;; Exact upper bound
-                         (- (/ (log (- 1 ex)) (log vx)))
+                         (- (/ (log1p (- ex)) (log vx)))
                          #;; Loose upper bound
                          (/ ex (- 1 (/ 1 vx)))))]
          [(positive? vx)
           (make-float (log vx)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          ;; Exact upper bound
-                         (/ (log (- 1 ex)) (log vx))
+                         (/ (log1p (- ex)) (log vx))
                          #;; Loose upper bound
                          (/ ex (- 1 vx))))]
          [else
@@ -192,18 +187,18 @@ The actual floating-point number lies somewhere in this interval.
          [(zero? vx)  (fl 1)]
          [(positive? vx)
           (make-float (exp vx)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          ;; Exact upper bound
-                         (- (exp (* ex vx)) 1)
+                         (expm1 (* ex vx))
                          #;; Loose upper bound
                          (* ex (/ vx (log 2)))))]
          [else
           (make-float (exp vx)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          ;; Exact upper bound
-                         (- (exp (* ex (- vx))) 1)
+                         (expm1 (- (* ex vx)))
                          #;; Loose upper bound
-                         (* ex (/ (- vx) (log 2)))))]))]))
+                         (* ex (/ vx (log 0.5)))))]))]))
 
 (define/drbayes (fllog1p x)
   (cond
@@ -214,22 +209,22 @@ The actual floating-point number lies somewhere in this interval.
        (cond
          [(zero? vx)  (fl 0)]
          [(positive? vx)
-          (make-float (log (+ 1 vx))
-                      (+ (const (* 0.5 epsilon.0))
+          (make-float (log1p vx)
+                      (+ (const (* 0.5 epsilon.f))
                          #;; Exact upper bound
-                         (- 1 (/ (log1p (* (- 1 ex) vx)) (log (+ 1 vx))))
+                         (- 1 (/ (log1p (* (- 1 ex) vx)) (log1p vx)))
                          #;; Loose upper bound (gets looser as vx increases)
                          ex
                          ;; Loose upper bound (gets tighter as vx increases)
-                         (if (vx . < . 3) ex (- (/ (log (- 1 ex)) (log (+ 1 vx)))))))]
-         #;; Only needed for the exact upper bound
+                         (if (vx . < . 3) ex (- (/ (log1p (- ex)) (log1p vx))))))]
+         ;; Only needed for the exact upper bound
          [((* (+ 1 ex) vx) . <= . -1)
           (float-any)]
          [else
-          (make-float (log (+ 1 vx))
-                      (+ (const (* 0.5 epsilon.0))
+          (make-float (log1p vx)
+                      (+ (const (* 0.5 epsilon.f))
                          #;; Exact upper bound
-                         (- (/ (log1p (* (+ 1 ex) vx)) (log (+ 1 vx))) 1)
+                         (- (/ (log1p (* (+ 1 ex) vx)) (log1p vx)) 1)
                          ;; Loose upper bound
                          (/ ex (+ vx 1))))]))]))
 
@@ -242,15 +237,15 @@ The actual floating-point number lies somewhere in this interval.
        (cond
          [(zero? vx)  (fl 0)]
          [(positive? vx)
-          (make-float (- (exp vx) 1)
-                      (+ (const (* 0.5 epsilon.0))
+          (make-float (expm1 vx)
+                      (+ (const (* 0.5 epsilon.f))
                          #;; Exact upper bound
                          (- (/ (expm1 (* (+ 1 ex) vx)) (expm1 vx)) 1)
                          ;; Loose upper bound
                          (* ex (+ 1 (/ vx (log 2))))))]
          [else
-          (make-float (- (exp vx) 1)
-                      (+ (const (* 0.5 epsilon.0))
+          (make-float (expm1 vx)
+                      (+ (const (* 0.5 epsilon.f))
                          #;; Exact upper bound
                          (- 1 (/ (expm1 (* (- 1 ex) vx)) (expm1 vx)))
                          ;; Loose upper bound
@@ -265,7 +260,7 @@ The actual floating-point number lies somewhere in this interval.
         #;; Exact upper bound
         (/ (+ (* vx ex) (* vy ey)) (+ vx vy))
         ;; Looser bound
-        (if (ex . > . ey) ex ey)]
+        (if (> ex ey) ex ey)]
        [else
         (let ([z  (+ 1 (/ vy vx))])
           (cond [(nonnegative? z)
@@ -289,7 +284,7 @@ The actual floating-point number lies somewhere in this interval.
         #;; Exact upper bound
         (/ (+ (* vx ex) (* vy ey)) (+ vx vy))
         ;; Looser bound
-        (if (ex . > . ey) ex ey)]
+        (if (> ex ey) ex ey)]
        [else
         (let ([z  (+ 1 (/ vx vy))])
           (cond [(nonnegative? z)
@@ -324,7 +319,7 @@ The actual floating-point number lies somewhere in this interval.
               (if (and (zero? ex) (zero? ey)) (fl 0) (float-any))]
              [else
               (make-float (+ vx vy)
-                          (+ (const (* 0.5 epsilon.0))
+                          (+ (const (* 0.5 epsilon.f))
                              (fladd-error vx ex vy ey)))]))]))
 
 (define/drbayes (fl- x y)
@@ -343,7 +338,7 @@ The actual floating-point number lies somewhere in this interval.
          [(or (zero? vx) (zero? vy))  (fl 0)]
          [else
           (make-float (* vx vy)
-                      (+ (const (* 0.5 epsilon.0))
+                      (+ (const (* 0.5 epsilon.f))
                          (- (* (+ 1 ex) (+ 1 ey)) 1)))]))]))
 
 (define/drbayes (fl/ x y)
@@ -359,7 +354,7 @@ The actual floating-point number lies somewhere in this interval.
              [(zero? vy)  (float-any)]
              [else
               (make-float (/ vx vy)
-                          (+ (const (* 0.5 epsilon.0))
+                          (+ (const (* 0.5 epsilon.f))
                              (- (/ (+ 1 ex) (- 1 ey)) 1)))]))]))
 
 #|
@@ -376,7 +371,7 @@ The actual floating-point number lies somewhere in this interval.
              [((* (+ 1 ex) vx) . <= . (const gamma-crit))
               ;; All floats on the left side of the critical value
               (make-float (gamma vx)
-                          (+ (const (* 0.5 epsilon.0))
+                          (+ (const (* 0.5 epsilon.f))
                              #;; Exact upper bound
                              (- (/ (gamma (* (- 1 ex) vx)) (gamma vx)) 1)
                              ;; Looser bound
@@ -384,7 +379,7 @@ The actual floating-point number lies somewhere in this interval.
              [((* (- 1 ex) vx) . >= . (const gamma-crit))
               ;; All floats on the right side of the critical value
               (make-float (gamma vx)
-                          (+ (const (* 0.5 epsilon.0))
+                          (+ (const (* 0.5 epsilon.f))
                              #;; Exact upper bound
                              (- (/ (gamma (* (+ 1 ex) vx)) (gamma vx)) 1)
                              ;; Looser bound
@@ -392,7 +387,7 @@ The actual floating-point number lies somewhere in this interval.
              [else
               ;; Floats on each side of the critical value
               (make-float (gamma vx)
-                          (+ (const (* 0.5 epsilon.0))
+                          (+ (const (* 0.5 epsilon.f))
                              #;; Exact upper bound
                              (max (max (- (/ (gamma (* (- 1 ex) vx)) (gamma vx)) 1)
                                        (- (/ (gamma (* (+ 1 ex) vx)) (gamma vx)) 1))
@@ -401,73 +396,4 @@ The actual floating-point number lies somewhere in this interval.
                              (max (max (/ ex 0.45)
                                        (/ ex (+ -0.000224 (/ 0.157 (+ vx -1.23)))))
                                   (- 1 (/ (const gamma-crit-val) (gamma vx))))))]))]))
-|#
-
-;; ===================================================================================================
-#|
-(define-syntax-rule (error/pre flop)
-  (meaning-pre (analyze (x) (flop (fl x)))))
-
-;; TODO: fix argument order in analyze
-(define-syntax-rule (error2d/pre flop)
-  (meaning-pre (analyze (x y) (flop (fl x) (fl y)))))
-|#
-;; ===================================================================================================
-;; flgeom
-
-(interval-max-splits 0)
-
-(define/drbayes (flgeom u p)
-  (fl/ (fllog u)
-       ;(fllog1p (flneg p))
-       (fllog (fl- (fl 1) p))
-       ))
-
-(define/drbayes (test-flgeom)
-  (let ([u  (random)]
-        [p  (random)])
-    (list u p (flgeom (fl u) (fl p)))))
-
-(printf "flgeom~n")
-(let ()
-  (define xyzs
-    (let ()
-      (define-values (xyzs ws)
-        #;
-        (drbayes-sample (drbayes (test-flgeom))
-                        1000
-                        (set-list reals reals (float-set reals (real-set (* 3 epsilon.0) +inf.0))))
-        
-        (drbayes-sample (drbayes
-                         (let ([upz  (test-flgeom)])
-                           (if (<= (const (* 3 epsilon.0))
-                                   (float-error (list-ref upz 2)))
-                               upz
-                               (fail))))
-                        1000))
-      (cast xyzs (Listof (List Flonum Flonum Any)))))
-  (printf "~v points~n" (length xyzs))
-  (plot (points (map (λ ([xyz : (List Flonum Flonum Any)]) (list (first xyz) (second xyz))) xyzs))
-        #:x-min 0 #:x-max 1
-        #:y-min 0 #:y-max 1))
-
-#|
-(run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-(preimage/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-              (float-set reals (real-set (* 3 epsilon.0) +inf.0)))
-(preimage/pre (run/pre (error2d/pre flgeom) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-              (float-any-set))
-(newline)
-
-
-(define/drbayes (flgeom* u p)
-  (fl/ (fllog u) (fllog1p (flneg p))))
-
-(printf "flgeom*~n")
-(run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-(preimage/pre (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-              (float-set reals (real-set (* 3 epsilon.0) +inf.0)))
-(preimage/pre (run/pre (error2d/pre flgeom*) (set-list (real-set 0.0 1.0) (real-set 0.0 1.0)))
-              (float-any-set))
-(newline)
 |#

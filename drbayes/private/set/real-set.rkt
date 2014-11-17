@@ -17,6 +17,7 @@
          Nonextremal-Real-Set Nonfull-Real-Set Nonempty-Real-Set Real-Set
          interval-list?
          interval-list-elements
+         nonextremal-real-set->list
          real-set?
          real-set-singleton?
          real-set-complement

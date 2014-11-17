@@ -79,6 +79,8 @@
 (test-unary-op 'neg (neg/bot) (neg/pre) n)
 (test-unary-op 'exp (exp/bot) (exp/pre) n)
 (test-unary-op 'log (log/bot) (log/pre) n)
+(test-unary-op 'expm1 (expm1/bot) (expm1/pre) n)
+(test-unary-op 'log1p (log1p/bot) (log1p/pre) n)
 (test-unary-op 'sqrt (sqrt/bot) (sqrt/pre) n)
 (test-unary-op 'asin (asin/bot) (asin/pre) n)
 (test-unary-op 'acos (acos/bot) (acos/pre) n)

@@ -4,6 +4,7 @@
          math/distributions
          math/statistics
          math/flonum
+         math/base
          drbayes
          "../test-utils.rkt"
          "normal-normal.rkt")
@@ -203,7 +204,7 @@
 #;; Test: same as above, with let
 (begin
   (set! n 10000)
-  (interval-max-splits 3)
+  (interval-max-splits 5)
   
   (define/drbayes (e)
     (let ([x  (random)]
@@ -232,8 +233,8 @@
   (interval-max-splits 3)
   (define/drbayes (e) (< (random) (random)))
   ;(define/drbayes (g x) (equal? x #t))
-  ;(define/drbayes (g x) (equal? x #f))
-  (define/drbayes (g x) #t)
+  (define/drbayes (g x) (equal? x #f))
+  ;(define/drbayes (g x) #t)
   )
 
 #;; Test: random boolean
@@ -266,8 +267,8 @@
   (define/drbayes (e)
     (let ([x  (random)]
           [y  (random)])
-      ;(list x y (strict-if (< x y) #t (> x (scale y (const 8)))))
-      (list x y (if (< x y) #t (> x (scale y (const 8)))))
+      (list x y (strict-if (< x y) #t (> x (scale y (const 8)))))
+      ;(list x y (if (< x y) #t (> x (scale y (const 8)))))
       ))
   (define/drbayes (g xs)
     (list-ref xs 2)))
@@ -556,8 +557,8 @@
     (let ([x  (uniform (const (- pi)) (const pi))]
           [y  (uniform -1.1 1.1)])
       (list x y
-            (- y (partial-cos x))
-            ;(- y (partial-sin x))
+            ;(- y (partial-cos x))
+            (- y (partial-sin x))
             )))
   
   (define/drbayes (g xs)
@@ -568,12 +569,12 @@
 ;; Looked at top-down, the plots should look like the graphs of the functions
 (begin
   (interval-max-splits 1)
-  
+  #;
   (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform 0 (const pi))])
       (list x y (- y (acos x)))))
-  #;
+  
   (define/drbayes (e)
     (let ([x  (uniform -1 1)]
           [y  (uniform (const (* -0.5 pi)) (const (* 0.5 pi)))])
@@ -612,7 +613,7 @@
     (and (<= -0.1 (list-ref xs 1))
          (<= (list-ref xs 1) 0.1))))
 
-;; Test: thermometer that goes to 100
+#;; Test: thermometer that goes to 100
 (begin
   (interval-max-splits 3)
   ;(interval-min-length 0.0)
@@ -626,7 +627,7 @@
             )))
   
   (define/drbayes (g xs)
-    (>= (list-ref xs 1) 100)))
+    (= (list-ref xs 1) 100)))
 
 #;; Test: Normal-Normal model with circular condition
 ;; Preimage should look like a football set up for a field goal
@@ -837,9 +838,8 @@
   (let ([S  (refine stores)])
     (if (empty-store-set? S) (empty-set-error) S)))
 
-(printf "idxs = ~v~n" idxs)
-(printf "S = ~v~n" S)
-(newline)
+(printf "idxs = ~v~n~n" idxs)
+(printf "S = ~v~n~n" S)
 
 (struct: domain-sample ([S : Nonempty-Store-Set]
                         [s : Store]

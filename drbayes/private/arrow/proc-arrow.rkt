@@ -90,6 +90,8 @@
 (define (neg/proc) (lower/proc (neg/bot)))
 (define (exp/proc) (lower/proc (exp/bot)))
 (define (log/proc) (lower/proc (log/bot)))
+(define (expm1/proc) (lower/proc (expm1/bot)))
+(define (log1p/proc) (lower/proc (log1p/bot)))
 (define (sqrt/proc) (lower/proc (sqrt/bot)))
 (define (asin/proc) (lower/proc (asin/bot)))
 (define (acos/proc) (lower/proc (acos/bot)))
@@ -97,12 +99,18 @@
 (define (ceiling/proc) (lower/proc (ceiling/bot)))
 (define (round/proc) (lower/proc (round/bot)))
 (define (truncate/proc) (lower/proc (truncate/bot)))
-
 (define (cauchy/proc) (lower/proc (cauchy/bot)))
 (define (normal/proc) (lower/proc (normal/bot)))
+(define (abs/proc) (lower/proc (abs/bot)))
+(define (sqr/proc) (lower/proc (sqr/bot)))
+(define (recip/proc) (lower/proc (recip/bot)))
+(define (partial-cos/proc) (lower/proc (partial-cos/bot)))
+(define (partial-sin/proc) (lower/proc (partial-sin/bot)))
 
 (define (+/proc) (lower/proc (+/bot)))
 (define (-/proc) (lower/proc (-/bot)))
+(define (*/proc) (lower/proc (*/bot)))
+(define (//proc) (lower/proc (//bot)))
 
 (define (zero?/proc) (lower/proc (zero?/bot)))
 (define (negative?/proc) (lower/proc (negative?/bot)))
@@ -114,13 +122,4 @@
 (define (>/proc) (lower/proc (>/bot)))
 (define (<=/proc) (lower/proc (<=/bot)))
 (define (>=/proc) (lower/proc (>=/bot)))
-
-(define (abs/proc) (lower/proc (abs/bot)))
-(define (sqr/proc) (lower/proc (sqr/bot)))
-(define (recip/proc) (lower/proc (recip/bot)))
-
-(define (*/proc) (lower/proc (*/bot)))
-(define (//proc) (lower/proc (//bot)))
-
-(define (partial-cos/proc) (lower/proc (partial-cos/bot)))
-(define (partial-sin/proc) (lower/proc (partial-sin/bot)))
+(define (=/proc) (lower/proc (=/bot)))

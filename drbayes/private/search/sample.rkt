@@ -313,6 +313,7 @@
            (printf "i = ~v~n" i)
            (flush-output))
          (let-values ([(leaf-ts leaf-ps t q)  (sample-search-tree t q)])
+           ;(printf "tree size: ~v~n~n" (search-tree-size t))
            (let: inner-loop ([leaf-ts leaf-ts]
                              [leaf-ps leaf-ps]
                              [bs : (Listof Value)   bs]
@@ -324,8 +325,9 @@
                 (define leaf-t (first leaf-ts))
                 (define leaf-p (first leaf-ps))
                 (match-define (search-leaf S m) leaf-t)
+                ;(printf "S = ~v~n~n" S)
                 (cond
-                  [(or (empty-store-set? S) (m . <= . 0.0))
+                  [(empty-store-set? S)
                    ;(printf "sample-search-tree returned failure~n")
                    (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)]
                   [else
@@ -345,6 +347,8 @@
                       ;(printf "refinement-sample-point returned #f~n")
                       (inner-loop (rest leaf-ts) (rest leaf-ps) bs ws)])])]))))]
       [else
-       (when (q . <= . 0.0)
-         (error 'drbayes-sample "cannot sample from a zero-probability set"))
+       (cond [(and (search-leaf? t) (empty-store-set? (search-leaf-value t)))
+              (error 'drbayes-sample "cannot sample from the empty set")]
+             [(q . <= . 0.0)
+              (error 'drbayes-sample "cannot sample from a zero-probability set")])
        (values bs ws)])))
