@@ -3,8 +3,8 @@
 (require math/bigfloat
          math/flonum
          math/base
-         "../../private/flonum.rkt"
-         "../../private/bigfloat.rkt")
+         drbayes/private/flonum
+         (only-in drbayes/private/bigfloat bfprob* bfprob/ bfprob+ bfprob- bfprob-midpoint))
 
 (define -inf (flonum->ordinal -inf.0))
 (define +inf (flonum->ordinal +inf.0))

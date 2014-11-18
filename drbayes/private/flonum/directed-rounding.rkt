@@ -5,7 +5,8 @@
          racket/performance-hint
          math/flonum
          racket/math
-         "flops.rkt")
+         "flops.rkt"
+         "symmetric-log.rkt")
 
 (provide (all-defined-out))
 
@@ -13,12 +14,12 @@
 ;; Using fl2 functions for directed rounding
 
 (: fl2->fl/rndd (-> Flonum Flonum Flonum Flonum))
-(define (fl2->fl/rndd x0 x1 mn)
-  (if (fl< x1 0.0) (flmax mn (flprev* x0)) x0))
+(define (fl2->fl/rndd x.hi x.lo mn)
+  (if (fl< x.lo 0.0) (flmax mn (flprev* x.hi)) x.hi))
 
 (: fl2->fl/rndu (-> Flonum Flonum Flonum Flonum))
-(define (fl2->fl/rndu x0 x1 mx)
-  (if (fl> x1 0.0) (flmin mx (flnext* x0)) x0))
+(define (fl2->fl/rndu x.hi x.lo mx)
+  (if (fl> x.lo 0.0) (flmin mx (flnext* x.hi)) x.hi))
 
 (define-syntax (define-unary-flops/rnd stx)
   (syntax-case stx ()
@@ -29,10 +30,10 @@
          (begin
            (: name/rndd (-> Flonum Flonum))
            (: name/rndu (-> Flonum Flonum))
-           (define (name/rndd x) (let-values ([(y0 y1)  (flop/error x)])
-                                   (fl2->fl/rndd y0 y1 mn)))
-           (define (name/rndu x) (let-values ([(y0 y1)  (flop/error x)])
-                                   (fl2->fl/rndu y0 y1 mx))))))]))
+           (define (name/rndd x) (let-values ([(y.hi y.lo)  (flop/error x)])
+                                   (fl2->fl/rndd y.hi y.lo mn)))
+           (define (name/rndu x) (let-values ([(y.hi y.lo)  (flop/error x)])
+                                   (fl2->fl/rndu y.hi y.lo mx))))))]))
 
 (define-syntax (define-binary-flops/rnd stx)
   (syntax-case stx ()
@@ -43,10 +44,10 @@
          (begin
            (: name/rndd (-> Flonum Flonum Flonum))
            (: name/rndu (-> Flonum Flonum Flonum))
-           (define (name/rndd x y) (let-values ([(z0 z1)  (flop/error x y)])
-                                     (fl2->fl/rndd z0 z1 mn)))
-           (define (name/rndu x y) (let-values ([(z0 z1)  (flop/error x y)])
-                                     (fl2->fl/rndu z0 z1 mx))))))]))
+           (define (name/rndd x y) (let-values ([(z.hi z.lo)  (flop/error x y)])
+                                     (fl2->fl/rndd z.hi z.lo mn)))
+           (define (name/rndu x y) (let-values ([(z.hi z.lo)  (flop/error x y)])
+                                     (fl2->fl/rndu z.hi z.lo mx))))))]))
 
 ;; ===================================================================================================
 ;; Faking directed rounding using flstep*
@@ -99,6 +100,8 @@
   (define-unary-flops/rnd flexpm1 flexpm1/error   -1.0 +inf.0)
   (define-unary-flops/rnd fllog1p fllog1p/error -inf.0 +inf.0)
   (define-unary-flops/rnd flrecip flrecip/error -inf.0 +inf.0)
+  
+  (define-unary-flops/rnd flprob->flonum flprob->flonum/error 0.0 1.0)
   
   (define-binary-flops/rnd fl+ fl+/error -inf.0 +inf.0)
   (define-binary-flops/rnd fl- fl-/error -inf.0 +inf.0)

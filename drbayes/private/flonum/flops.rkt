@@ -55,3 +55,11 @@
            (cond [(fx= n 0)  x]
                  [else  (loop (flprev* x) (+ n 1))]))]
         [else  x]))
+
+(: fllog-random (-> Flonum Flonum Flonum))
+(define (fllog-random a b)
+  (let ([a  (min a b)]
+        [b  (max a b)])
+    (let loop ()
+      (define x (lg+ a (+ (fllog (random)) (lg- b a))))
+      (if (<= a x b) x (loop)))))
