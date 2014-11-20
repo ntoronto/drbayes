@@ -19,8 +19,8 @@
 ;; ===================================================================================================
 ;; Pair sets
 
-(: pair-set (case-> (Nonempty-Set Nonextremal-Set -> Nonextremal-Pair-Set)
-                    (Nonextremal-Set Nonempty-Set -> Nonextremal-Pair-Set)
+(: pair-set (case-> (Nonempty-Set Plain-Set -> Plain-Pair-Set)
+                    (Plain-Set Nonempty-Set -> Plain-Pair-Set)
                     (Nonempty-Set Nonempty-Set -> Nonempty-Pair-Set)
                     (Nonfull-Set Set -> Nonfull-Pair-Set)
                     (Set Nonfull-Set -> Nonfull-Pair-Set)
@@ -29,7 +29,7 @@
   (cond [(and (universe? A1) (universe? A2))  pairs]
         [(empty-set? A1)  empty-pair-set]
         [(empty-set? A2)  empty-pair-set]
-        [else  (Nonextremal-Pair-Set A1 A2)]))
+        [else  (Plain-Pair-Set A1 A2)]))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Projections
@@ -40,7 +40,7 @@
 (define (pair-set-fst A)
   (cond [(empty-pair-set? A)  empty-set]
         [(pairs? A)  universe]
-        [else  (Nonextremal-Pair-Set-fst A)]))
+        [else  (Plain-Pair-Set-fst A)]))
 
 (: pair-set-snd (case-> (-> Empty-Pair-Set Empty-Set)
                         (-> Nonempty-Pair-Set Nonempty-Set)
@@ -48,7 +48,7 @@
 (define (pair-set-snd A)
   (cond [(empty-pair-set? A)  empty-set]
         [(pairs? A)  universe]
-        [else  (Nonextremal-Pair-Set-snd A)]))
+        [else  (Plain-Pair-Set-snd A)]))
 
 (: pair-set-projs (case-> (-> Empty-Pair-Set (Values Empty-Set Empty-Set))
                           (-> Nonempty-Pair-Set (Values Nonempty-Set Nonempty-Set))
@@ -56,8 +56,8 @@
 (define (pair-set-projs A)
   (cond [(empty-pair-set? A)  (values empty-set empty-set)]
         [(pairs? A)  (values universe universe)]
-        [else  (values (Nonextremal-Pair-Set-fst A)
-                       (Nonextremal-Pair-Set-snd A))]))
+        [else  (values (Plain-Pair-Set-fst A)
+                       (Plain-Pair-Set-snd A))]))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Unprojections
@@ -81,8 +81,8 @@
 (define (pair-set-member? A x)
   (cond [(empty-pair-set? A)  #f]
         [(pairs? A)  #t]
-        [else  (and (set-member? (Nonextremal-Pair-Set-fst A) (car x))
-                    (set-member? (Nonextremal-Pair-Set-snd A) (cdr x)))]))
+        [else  (and (set-member? (Plain-Pair-Set-fst A) (car x))
+                    (set-member? (Plain-Pair-Set-snd A) (cdr x)))]))
 
 (: pair-set-intersect (case-> (-> Pair-Set Nonfull-Pair-Set Nonfull-Pair-Set)
                               (-> Nonfull-Pair-Set Pair-Set Nonfull-Pair-Set)
@@ -94,20 +94,20 @@
         [(empty-pair-set? A)  A]
         [(empty-pair-set? B)  B]
         [else
-         (let* ([A1  (Nonextremal-Pair-Set-fst A)]
-                [B1  (Nonextremal-Pair-Set-fst B)]
+         (let* ([A1  (Plain-Pair-Set-fst A)]
+                [B1  (Plain-Pair-Set-fst B)]
                 [C1  (set-intersect A1 B1)])
            (if (empty-set? C1)
                empty-pair-set
-               (let* ([A2  (Nonextremal-Pair-Set-snd A)]
-                      [B2  (Nonextremal-Pair-Set-snd B)]
+               (let* ([A2  (Plain-Pair-Set-snd A)]
+                      [B2  (Plain-Pair-Set-snd B)]
                       [C2  (set-intersect A2 B2)])
                  (if (empty-set? C2)
                      empty-pair-set
                      (cond [(and (eq? A1 C1) (eq? A2 C2))  A]
                            [(and (eq? B1 C1) (eq? B2 C2))  B]
                            [else  (assert (pair-set C1 C2)
-                                          Nonextremal-Pair-Set?)])))))]))
+                                          Plain-Pair-Set?)])))))]))
 
 (: pair-set-join (case-> (-> Pair-Set Nonempty-Pair-Set Nonempty-Pair-Set)
                          (-> Nonempty-Pair-Set Pair-Set Nonempty-Pair-Set)
@@ -119,8 +119,8 @@
         [(pairs? A)  A]
         [(pairs? B)  B]
         [else
-         (define C1 (set-join (Nonextremal-Pair-Set-fst A) (Nonextremal-Pair-Set-fst B)))
-         (define C2 (set-join (Nonextremal-Pair-Set-snd A) (Nonextremal-Pair-Set-snd B)))
+         (define C1 (set-join (Plain-Pair-Set-fst A) (Plain-Pair-Set-fst B)))
+         (define C2 (set-join (Plain-Pair-Set-snd A) (Plain-Pair-Set-snd B)))
          (if (and (universe? C1) (universe? C2))
              pairs
              (pair-set C1 C2))]))
@@ -130,14 +130,14 @@
   (cond [(eq? A B)  #t]
         [(or (empty-pair-set? A) (pairs? B))  #t]
         [(or (pairs? A) (empty-pair-set? B))  #f]
-        [else  (and (set-subseteq? (Nonextremal-Pair-Set-fst A) (Nonextremal-Pair-Set-fst B))
-                    (set-subseteq? (Nonextremal-Pair-Set-snd A) (Nonextremal-Pair-Set-snd B)))]))
+        [else  (and (set-subseteq? (Plain-Pair-Set-fst A) (Plain-Pair-Set-fst B))
+                    (set-subseteq? (Plain-Pair-Set-snd A) (Plain-Pair-Set-snd B)))]))
 
 (: pair-set-singleton? (-> Pair-Set Boolean))
 (define (pair-set-singleton? A)
   (cond [(or (empty-pair-set? A) (pairs? A))  #f]
-        [else  (and (set-singleton? (Nonextremal-Pair-Set-fst A))
-                    (set-singleton? (Nonextremal-Pair-Set-snd A)))]))
+        [else  (and (set-singleton? (Plain-Pair-Set-fst A))
+                    (set-singleton? (Plain-Pair-Set-snd A)))]))
 
 ;; ===================================================================================================
 ;; Basic set ops
@@ -168,7 +168,7 @@
                       (Basic Nonempty-Basic -> (U Different Nonempty-Basic))
                       (Basic Basic -> (U Different Basic))))
 (define (basic-join A B)
-  (cond [(and (real-set? A) (real-set? B))  (real-set-union A B)]
+  (cond [(and (real-set? A) (real-set? B))  (real-set-join A B)]
         [(and (bool-set? A) (bool-set? B))  (bool-set-union A B)]
         [(and (null-set? A) (null-set? B))  (null-set-union A B)]
         [(and (pair-set? A) (pair-set? B))  (pair-set-join A B)]

@@ -46,16 +46,18 @@
                  (cons (ann-ifte*-index j (delay (loop (force t))) (delay (loop (force f))))
                        (loop idxs))])))))
 
-(: interval-split (Nonempty-Interval Flonum -> (Values (Listof Nonempty-Interval)
-                                                       (Listof Flonum))))
+(: interval-split (-> Nonempty-Real-Interval
+                      Flonum
+                      (Values (Listof Nonempty-Real-Interval)
+                              (Listof Flonum))))
 (define (interval-split I p)
-  (define-values (a b a? b?) (interval-fields I))
+  (define-values (a b a? b?) (real-interval-fields I))
   (define c (fl* p (fl+ a b)))
   (define m1 (fl- c a))
   (define m2 (fl- b c))
   (if (and (positive? m1) (positive? m2))
-      (values (list (Nonextremal-Interval a c a? #t)
-                    (Nonextremal-Interval c b #f b?))
+      (values (list (Plain-Real-Interval a c a? #t)
+                    (Plain-Real-Interval c b #f b?))
               (list m1 m2))
       (values (list I)
               (list 1.0))))
@@ -177,8 +179,12 @@
                       'probabilistic
                       'branches)]))
 
-(: proportional-split (Nonempty-Store-Set Refiner Store-Index Nonempty-Interval
-                                          -> (Values (Listof Nonempty-Interval) (Listof Flonum))))
+(: proportional-split (-> Nonempty-Store-Set
+                          Refiner
+                          Store-Index
+                          Nonempty-Real-Interval
+                          (Values (Listof Nonempty-Real-Interval)
+                                  (Listof Flonum))))
 (define (proportional-split S refine i I)
   (define-values (Is ls) (interval-split I 0.5))
   (match Is
@@ -208,9 +214,10 @@
      (unless (real-set-subseteq? I unit-interval)
        (error 'build-search-tree/ivl "internal error: omega projection is ~a" I))
      (define-values (Is ls)
-       (cond [(interval-list? I)  (define Is (interval-list-elements I))
-                                  (values Is (map interval-measure Is))]
-             [((interval-measure I) . < . min-length)  (values (list I) (list 1.0))]
+       (cond [(Plain-Real-Interval-List? I)
+              (define Is (Plain-Real-Interval-List-elements I))
+              (values Is (map real-interval-measure Is))]
+             [(< (real-interval-measure I) min-length)  (values (list I) (list 1.0))]
              [split  (split I)]
              ;[else   (interval-split I 0.5)]
              [else   (proportional-split S refine j I)]
@@ -224,7 +231,7 @@
                 [else  (define idx (ann-random-index j split (- m 1) min-length))
                        (build-search-tree S (cons idx idxs) refine)]))]
        [else
-        (: make-node (Nonempty-Interval -> (Promise Omega-Search-Tree)))
+        (: make-node (Nonempty-Real-Interval -> (Promise Omega-Search-Tree)))
         (define (make-node I)
           (delay
             (let ([S  (refine (store-set-random-unproj S j I))])
@@ -268,7 +275,7 @@
   (match-define (random-index j split) idx)
   (define I (store-set-random-proj S j))
   (define x (if (reals? I) +nan.0 (real-set-sample-point I)))
-  (define J (Nonextremal-Interval x x #t #t))
+  (define J (Plain-Real-Interval x x #t #t))
   (define q (real-set-measure I))
   (let ([S  (refine (store-set-random-unproj S j J))])
     (refinement-sample S (* m q) p idxs refine)))

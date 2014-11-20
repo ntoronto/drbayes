@@ -22,34 +22,34 @@
 (define-singleton-type Empty-Store-Set Base-Store-Set empty-store-set)
 (define-singleton-type Full-Store-Set Base-Store-Set stores)
 
-(struct Nonextremal-Store-Set Base-Store-Set
-  ([random : Nonextremal-Real-Set]
+(struct Plain-Store-Set Base-Store-Set
+  ([random : Plain-Real-Set]
    [branch : Nonempty-Bool-Set]
    [left   : Nonempty-Store-Set]
    [right  : Nonempty-Store-Set])
   #:transparent)
 
-(define-type Nonempty-Store-Set (U Nonextremal-Store-Set Full-Store-Set))
-(define-type Nonfull-Store-Set (U Nonextremal-Store-Set Empty-Store-Set))
-(define-type Store-Set (U Nonextremal-Store-Set Empty-Store-Set Full-Store-Set))
+(define-type Nonempty-Store-Set (U Plain-Store-Set Full-Store-Set))
+(define-type Nonfull-Store-Set (U Plain-Store-Set Empty-Store-Set))
+(define-type Store-Set (U Plain-Store-Set Empty-Store-Set Full-Store-Set))
 
 (: store-set (-> Real-Set Bool-Set Store-Set Store-Set Store-Set))
 (define (store-set X B L R)
   (let ([X  (real-set-intersect unit-interval X)])
     (if (or (empty-real-set? X) (empty-bool-set? B) (empty-store-set? L) (empty-store-set? R))
         empty-store-set
-        (Nonextremal-Store-Set X B L R))))
+        (Plain-Store-Set X B L R))))
 
 ;; ===================================================================================================
 ;; Simple projections
 
 (: store-set-random (case-> (-> Empty-Store-Set Empty-Real-Set)
-                            (-> Nonempty-Store-Set Nonextremal-Real-Set)
+                            (-> Nonempty-Store-Set Plain-Real-Set)
                             (-> Store-Set Real-Set)))
 (define (store-set-random S)
   (cond [(empty-store-set? S)  empty-real-set]
         [(stores? S)  unit-interval]
-        [else  (Nonextremal-Store-Set-random S)]))
+        [else  (Plain-Store-Set-random S)]))
 
 (: store-set-branch (case-> (-> Empty-Store-Set Empty-Bool-Set)
                             (-> Nonempty-Store-Set Nonempty-Bool-Set)
@@ -57,7 +57,7 @@
 (define (store-set-branch S)
   (cond [(empty-store-set? S)  empty-bool-set]
         [(stores? S)  bools]
-        [else  (Nonextremal-Store-Set-branch S)]))
+        [else  (Plain-Store-Set-branch S)]))
 
 (: store-set-left (case-> (-> Empty-Store-Set Empty-Store-Set)
                           (-> Nonempty-Store-Set Nonempty-Store-Set)
@@ -65,7 +65,7 @@
 (define (store-set-left S)
   (cond [(empty-store-set? S)  empty-store-set]
         [(stores? S)  stores]
-        [else  (Nonextremal-Store-Set-left S)]))
+        [else  (Plain-Store-Set-left S)]))
 
 (: store-set-right (case-> (-> Empty-Store-Set Empty-Store-Set)
                            (-> Nonempty-Store-Set Nonempty-Store-Set)
@@ -73,13 +73,13 @@
 (define (store-set-right S)
   (cond [(empty-store-set? S)  empty-store-set]
         [(stores? S)  stores]
-        [else  (Nonextremal-Store-Set-right S)]))
+        [else  (Plain-Store-Set-right S)]))
 
 (: store-set-projs (case-> (-> Empty-Store-Set (Values Empty-Real-Set
                                                        Empty-Bool-Set
                                                        Empty-Store-Set
                                                        Empty-Store-Set))
-                           (-> Nonempty-Store-Set (Values Nonextremal-Real-Set
+                           (-> Nonempty-Store-Set (Values Plain-Real-Set
                                                           Nonempty-Bool-Set
                                                           Nonempty-Store-Set
                                                           Nonempty-Store-Set))
@@ -90,10 +90,10 @@
 (define (store-set-projs S)
   (cond [(empty-store-set? S)  (values empty-real-set empty-bool-set empty-store-set empty-store-set)]
         [(stores? S)  (values unit-interval bools stores stores)]
-        [else  (values (Nonextremal-Store-Set-random S)
-                       (Nonextremal-Store-Set-branch S)
-                       (Nonextremal-Store-Set-left   S)
-                       (Nonextremal-Store-Set-right  S))]))
+        [else  (values (Plain-Store-Set-random S)
+                       (Plain-Store-Set-branch S)
+                       (Plain-Store-Set-left   S)
+                       (Plain-Store-Set-right  S))]))
 
 ;; ===================================================================================================
 ;; Simple unprojections
@@ -126,16 +126,16 @@
 ;; Indexed projections
 
 (: store-set-random-proj (case-> (-> Empty-Store-Set Store-Index Empty-Real-Set)
-                                 (-> Nonempty-Store-Set Store-Index Nonextremal-Real-Set)
+                                 (-> Nonempty-Store-Set Store-Index Plain-Real-Set)
                                  (-> Store-Set Store-Index Real-Set)))
 (define (store-set-random-proj S j)
   (if (empty-store-set? S)
       empty-real-set
       (let loop ([S S] [j  (reverse j)])
         (cond [(stores? S)  unit-interval]
-              [(empty? j)  (Nonextremal-Store-Set-random S)]
-              [(first j)  (loop (Nonextremal-Store-Set-left  S) (rest j))]
-              [else       (loop (Nonextremal-Store-Set-right S) (rest j))]))))
+              [(empty? j)  (Plain-Store-Set-random S)]
+              [(first j)  (loop (Plain-Store-Set-left  S) (rest j))]
+              [else       (loop (Plain-Store-Set-right S) (rest j))]))))
 
 (: store-set-branch-proj (case-> (-> Empty-Store-Set Store-Index Empty-Bool-Set)
                                  (-> Nonempty-Store-Set Store-Index Nonempty-Bool-Set)
@@ -145,9 +145,9 @@
       empty-bool-set
       (let loop ([S S] [j  (reverse j)])
         (cond [(stores? S)  bools]
-              [(empty? j)  (Nonextremal-Store-Set-branch S)]
-              [(first j)  (loop (Nonextremal-Store-Set-left  S) (rest j))]
-              [else       (loop (Nonextremal-Store-Set-right S) (rest j))]))))
+              [(empty? j)  (Plain-Store-Set-branch S)]
+              [(first j)  (loop (Plain-Store-Set-left  S) (rest j))]
+              [else       (loop (Plain-Store-Set-right S) (rest j))]))))
 
 ;; ===================================================================================================
 ;; Indexed unprojections
@@ -197,8 +197,8 @@
         [(eq? S1 S2)  S1]
         [(or (empty-store-set? S1) (empty-store-set? S2))  empty-store-set]
         [else
-         (match-define (Nonextremal-Store-Set X1 B1 L1 R1) S1)
-         (match-define (Nonextremal-Store-Set X2 B2 L2 R2) S2)
+         (match-define (Plain-Store-Set X1 B1 L1 R1) S1)
+         (match-define (Plain-Store-Set X2 B2 L2 R2) S2)
          (let ([B  (bool-set-intersect B1 B2)])
            (if (empty-bool-set? B)
                empty-store-set
@@ -213,7 +213,7 @@
                                  empty-store-set
                                  (cond [(and (eq? X X1) (eq? B B1) (eq? L L1) (eq? R R1))  S1]
                                        [(and (eq? X X2) (eq? B B2) (eq? L L2) (eq? R R2))  S2]
-                                       [else  (Nonextremal-Store-Set X B L R)])))))))))]))
+                                       [else  (Plain-Store-Set X B L R)])))))))))]))
 
 ;; ===================================================================================================
 ;; Join
@@ -227,16 +227,16 @@
         [(eq? S1 S2)  S1]
         [(or (stores? S1) (stores? S2))  stores]
         [else
-         (match-define (Nonextremal-Store-Set X1 B1 L1 R1) S1)
-         (match-define (Nonextremal-Store-Set X2 B2 L2 R2) S2)
-         (define X (real-set-union X1 X2))
+         (match-define (Plain-Store-Set X1 B1 L1 R1) S1)
+         (match-define (Plain-Store-Set X2 B2 L2 R2) S2)
+         (define X (real-set-join X1 X2))
          (define B (bool-set-union B1 B2))
          (define L (store-set-join L1 L2))
          (define R (store-set-join R1 R2))
          (cond [(and (eq? X X1) (eq? B B1) (eq? L L1) (eq? R R1))  S1]
                [(and (eq? X X2) (eq? B B2) (eq? L L2) (eq? R R2))  S2]
                [(reals? X)  (error 'store-set-join "internal error: given ~a and ~a" X1 X2)]
-               [else  (Nonextremal-Store-Set X B L R)])]))
+               [else  (Plain-Store-Set X B L R)])]))
 
 ;; ===================================================================================================
 ;; Membership
@@ -248,7 +248,7 @@
       (let loop ([S S] [s s])
         (cond [(stores? S)  #t]
               [else
-               (match-define (Nonextremal-Store-Set X B L R) S)
+               (match-define (Plain-Store-Set X B L R) S)
                (and (or (bools? B)
                         (let ([b  (store-branch s)])
                           (if (bottom? b) #f (bool-set-member? B b))))
@@ -269,8 +269,8 @@
            (cond [(stores? S2)  #t]
                  [(stores? S1)  #f]
                  [else
-                  (match-define (Nonextremal-Store-Set X1 B1 L1 R1) S1)
-                  (match-define (Nonextremal-Store-Set X2 B2 L2 R2) S2)
+                  (match-define (Plain-Store-Set X1 B1 L1 R1) S1)
+                  (match-define (Plain-Store-Set X2 B2 L2 R2) S2)
                   (and (bool-set-subseteq? B1 B2)
                        (real-set-subseteq? X1 X2)
                        (loop L1 L2)
@@ -303,19 +303,19 @@
       (let loop ([S S])
         (if (stores? S)
             1.0
-            (match-let ([(Nonextremal-Store-Set X B L R)  S])
+            (match-let ([(Plain-Store-Set X B L R)  S])
               (* (real-set-measure X) (* (loop L) (loop R))))))))
 
 ;; ===================================================================================================
 
-(: store-set-random-list (-> Store-Set (Listof Nonextremal-Real-Set)))
+(: store-set-random-list (-> Store-Set (Listof Plain-Real-Set)))
 (define (store-set-random-list S)
   (if (empty-store-set? S)
       empty
       (let loop ([S S])
         (if (stores? S)
             empty
-            (match-let ([(Nonextremal-Store-Set X B L R)  S])
+            (match-let ([(Plain-Store-Set X B L R)  S])
               (append (if (eq? X unit-interval) empty (list X))
                       (loop L)
                       (loop R)))))))

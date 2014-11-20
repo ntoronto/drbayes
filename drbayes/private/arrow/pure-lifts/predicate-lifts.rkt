@@ -29,8 +29,8 @@
    (bot-basic Af)))
 
 (define nonzero-reals
-  (real-set-union (Nonextremal-Interval -inf.0 0.0 #f #f)
-                  (Nonextremal-Interval 0.0 +inf.0 #f #f)))
+  (real-set-join (Plain-Real-Interval -inf.0 0.0 #f #f)
+                 (Plain-Real-Interval 0.0 +inf.0 #f #f)))
 
 (define-values (zero?/bot zero?/pre)
   (real-predicate/prim 'zero?

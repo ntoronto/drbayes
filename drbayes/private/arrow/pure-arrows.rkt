@@ -304,11 +304,11 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; Random boolean store projection
 
-(: boolean-preimage (-> Flonum (Values Nonextremal-Interval
-                                       Nonextremal-Interval)))
+(: boolean-preimage (-> Flonum (Values Plain-Real-Interval
+                                       Plain-Real-Interval)))
 (define (boolean-preimage p)
-  (values (Nonextremal-Interval 0.0 p #t #f)
-          (Nonextremal-Interval p 1.0 #t #t)))
+  (values (Plain-Real-Interval 0.0 p #t #f)
+          (Plain-Real-Interval p 1.0 #t #t)))
 
 (: store-boolean/pre (Flonum -> Pre-Arrow))
 (define (store-boolean/pre p)
@@ -337,7 +337,7 @@
                            (nonempty-pre-mapping
                             bools  (fun (λ (B) (let* ([X  (cond [(eq? B trues)   Xt]
                                                                 [(eq? B falses)  Xf]
-                                                                [else  (real-set-union Xt Xf)])]
+                                                                [else  (real-set-join Xt Xf)])]
                                                       [S  (store-set-unrandom S X)])
                                                  (if (empty-store-set? S) empty-set S)))))]))))))]
         [else

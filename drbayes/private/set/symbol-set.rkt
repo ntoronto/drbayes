@@ -14,10 +14,10 @@
 (struct: bot-symbol-set ([values : (Setof Symbol)]) #:transparent)
 (struct: top-symbol-set ([values : (Setof Symbol)]) #:transparent)
 
-(define-type Nonextremal-Symbol-Set (U Symbol bot-symbol-set top-symbol top-symbol-set))
-(define-type Nonfull-Symbol-Set (U Nonextremal-Symbol-Set Empty-Symbol-Set))
-(define-type Nonempty-Symbol-Set (U Nonextremal-Symbol-Set Full-Symbol-Set))
-(define-type Symbol-Set (U Nonextremal-Symbol-Set Full-Symbol-Set Empty-Symbol-Set))
+(define-type Plain-Symbol-Set (U Symbol bot-symbol-set top-symbol top-symbol-set))
+(define-type Nonfull-Symbol-Set (U Plain-Symbol-Set Empty-Symbol-Set))
+(define-type Nonempty-Symbol-Set (U Plain-Symbol-Set Full-Symbol-Set))
+(define-type Symbol-Set (U Plain-Symbol-Set Full-Symbol-Set Empty-Symbol-Set))
 
 (: symbol-set? (Any -> Boolean : Symbol-Set))
 (define (symbol-set? v)
@@ -53,7 +53,7 @@
         [(= 1 (set-count s))  (top-symbol (set-first s))]
         [else  (top-symbol-set s)]))
 
-(: expand-symbol-set (Nonextremal-Symbol-Set -> (U bot-symbol-set top-symbol-set)))
+(: expand-symbol-set (Plain-Symbol-Set -> (U bot-symbol-set top-symbol-set)))
 (define (expand-symbol-set A)
   (cond [(symbol? A)  (bot-symbol-set (set A))]
         [(top-symbol? A)  (top-symbol-set (set (top-symbol-value A)))]
@@ -66,9 +66,8 @@
 ;; ===================================================================================================
 ;; Union
 
-(: nonextremal-symbol-set-union
-   (Nonextremal-Symbol-Set Nonextremal-Symbol-Set -> Nonempty-Symbol-Set))
-(define (nonextremal-symbol-set-union A B)
+(: plain-symbol-set-union (Plain-Symbol-Set Plain-Symbol-Set -> Nonempty-Symbol-Set))
+(define (plain-symbol-set-union A B)
   (cond [(and (symbol? A) (symbol? B))
          (if (eq? A B) A (bot-symbol-set (set A B)))]
         [(and (symbol? A) (top-symbol? B))
@@ -93,7 +92,7 @@
         [(empty-symbol-set? B)  A]
         [(full-symbol-set? A)  A]
         [(full-symbol-set? B)  B]
-        [else  (nonextremal-symbol-set-union A B)]))
+        [else  (plain-symbol-set-union A B)]))
 
 (: bot-bot-union (bot-symbol-set bot-symbol-set -> bot-symbol-set))
 (define (bot-bot-union A B)
@@ -116,9 +115,8 @@
 ;; ===================================================================================================
 ;; Intersection
 
-(: nonextremal-symbol-set-intersect
-   (Nonextremal-Symbol-Set Nonextremal-Symbol-Set -> Nonfull-Symbol-Set))
-(define (nonextremal-symbol-set-intersect A B)
+(: plain-symbol-set-intersect (Plain-Symbol-Set Plain-Symbol-Set -> Nonfull-Symbol-Set))
+(define (plain-symbol-set-intersect A B)
   (cond [(and (symbol? A) (symbol? B))
          (if (eq? A B) A empty-symbol-set)]
         [(and (symbol? A) (top-symbol? B))
@@ -145,7 +143,7 @@
         [(empty-symbol-set? B)  B]
         [(full-symbol-set? A)  B]
         [(full-symbol-set? B)  A]
-        [else  (nonextremal-symbol-set-intersect A B)]))
+        [else  (plain-symbol-set-intersect A B)]))
 
 (: bot-bot-intersect (bot-symbol-set bot-symbol-set -> (U Empty-Symbol-Set Symbol bot-symbol-set)))
 (define (bot-bot-intersect A B)
@@ -168,28 +166,27 @@
 ;; ===================================================================================================
 ;; Complement
 
-(: nonextremal-symbol-set-complement (Nonextremal-Symbol-Set -> Nonextremal-Symbol-Set))
-(define (nonextremal-symbol-set-complement A)
+(: plain-symbol-set-complement (Plain-Symbol-Set -> Plain-Symbol-Set))
+(define (plain-symbol-set-complement A)
   (cond [(symbol? A)  (top-symbol A)]
         [(top-symbol? A)  (top-symbol-value A)]
         [(bot-symbol-set? A)  (top-symbol-set (bot-symbol-set-values A))]
         [(top-symbol-set? A)  (bot-symbol-set (top-symbol-set-values A))]))
 
-(: symbol-set-complement (case-> (Nonextremal-Symbol-Set -> Nonextremal-Symbol-Set)
+(: symbol-set-complement (case-> (Plain-Symbol-Set -> Plain-Symbol-Set)
                                  (Nonempty-Symbol-Set -> Nonfull-Symbol-Set)
                                  (Nonfull-Symbol-Set -> Nonempty-Symbol-Set)
                                  (Symbol-Set -> Symbol-Set)))
 (define (symbol-set-complement A)
   (cond [(empty-symbol-set? A)  full-symbol-set]
         [(full-symbol-set? A)   empty-symbol-set]
-        [else  (nonextremal-symbol-set-complement A)]))
+        [else  (plain-symbol-set-complement A)]))
 
 ;; ===================================================================================================
 ;; Difference
 
-(: nonextremal-symbol-set-subtract
-   (Nonextremal-Symbol-Set Nonextremal-Symbol-Set -> Nonfull-Symbol-Set))
-(define (nonextremal-symbol-set-subtract A B)
+(: plain-symbol-set-subtract (Plain-Symbol-Set Plain-Symbol-Set -> Nonfull-Symbol-Set))
+(define (plain-symbol-set-subtract A B)
   (cond [(and (symbol? A) (symbol? B))
          (if (eq? A B) empty-symbol-set A)]
         [(and (symbol? A) (top-symbol? B))
@@ -208,7 +205,7 @@
                  [(and (top-symbol-set? A) (bot-symbol-set? B))  (top-bot-subtract A B)]
                  [(and (top-symbol-set? A) (top-symbol-set? B))  (top-top-subtract A B)]))]))
 
-(: symbol-set-subtract (case-> (Full-Symbol-Set Nonextremal-Symbol-Set -> Nonextremal-Symbol-Set)
+(: symbol-set-subtract (case-> (Full-Symbol-Set Plain-Symbol-Set -> Plain-Symbol-Set)
                                (Full-Symbol-Set Nonfull-Symbol-Set -> Nonempty-Symbol-Set)
                                (Symbol-Set Nonempty-Symbol-Set -> Nonfull-Symbol-Set)
                                (Symbol-Set Symbol-Set -> Symbol-Set)))
@@ -216,8 +213,8 @@
   (cond [(empty-symbol-set? B)  A]
         [(empty-symbol-set? A)  empty-symbol-set]
         [(full-symbol-set? B)  empty-symbol-set]
-        [(full-symbol-set? A)  (nonextremal-symbol-set-complement B)]
-        [else  (nonextremal-symbol-set-subtract A B)]))
+        [(full-symbol-set? A)  (plain-symbol-set-complement B)]
+        [else  (plain-symbol-set-subtract A B)]))
 
 (: bot-bot-subtract (bot-symbol-set bot-symbol-set -> (U Empty-Symbol-Set Symbol bot-symbol-set)))
 (define (bot-bot-subtract A B)

@@ -8,43 +8,43 @@
 (provide floor/bot ceiling/bot round/bot truncate/bot
          floor/pre ceiling/pre round/pre truncate/pre)
 
-(: monotone-interval-img (-> (-> Flonum Flonum) (-> Nonempty-Interval Interval)))
+(: monotone-interval-img (-> (-> Flonum Flonum) (-> Nonempty-Real-Interval Real-Interval)))
 (define ((monotone-interval-img f) A)
-  (define-values (a1 a2 a1? a2?) (interval-fields A))
-  (interval (f a1) (f a2) #t #t))
+  (define-values (a1 a2 a1? a2?) (real-interval-fields A))
+  (real-interval (f a1) (f a2) #t #t))
 
 (define flfloor-img (monotone-interval-img flfloor))
 (define flceiling-img (monotone-interval-img flceiling))
 (define flround-img (monotone-interval-img flround))
 (define fltruncate-img (monotone-interval-img fltruncate))
 
-(: flfloor-pre (-> Nonempty-Interval Interval))
+(: flfloor-pre (-> Nonempty-Real-Interval Real-Interval))
 (define (flfloor-pre B)
-  (define-values (b1 b2 b1? b2?) (interval-fields B))
-  (interval (if b1? (flceiling b1) (fl+/rndd (flfloor b1) 1.0))
-            (if b2? (fl+/rndu (flfloor b2) 1.0) (flceiling b2))
-            #t
-            #f))
+  (define-values (b1 b2 b1? b2?) (real-interval-fields B))
+  (real-interval (if b1? (flceiling b1) (fl+/rndd (flfloor b1) 1.0))
+                 (if b2? (fl+/rndu (flfloor b2) 1.0) (flceiling b2))
+                 #t
+                 #f))
 
-(: flceiling-pre (-> Nonempty-Interval Interval))
+(: flceiling-pre (-> Nonempty-Real-Interval Real-Interval))
 (define (flceiling-pre B)
-  (define-values (b1 b2 b1? b2?) (interval-fields B))
-  (interval (if b1? (fl-/rndd (flceiling b1) 1.0) (flfloor b1))
-            (if b2? (flfloor b2) (fl-/rndu (flceiling b2) 1.0))
-            #f
-            #t))
+  (define-values (b1 b2 b1? b2?) (real-interval-fields B))
+  (real-interval (if b1? (fl-/rndd (flceiling b1) 1.0) (flfloor b1))
+                 (if b2? (flfloor b2) (fl-/rndu (flceiling b2) 1.0))
+                 #f
+                 #t))
 
-(: flround-pre (-> Nonempty-Interval Interval))
+(: flround-pre (-> Nonempty-Real-Interval Real-Interval))
 (define (flround-pre B)
-  (define-values (b1 b2 b1? b2?) (interval-fields B))
-  (interval (if b1? (fl-/rndd (flceiling b1) 0.5) (fl+/rndd (flfloor b1) 0.5))
-            (if b2? (fl+/rndu (flfloor b2) 0.5) (fl-/rndu (flceiling b2) 0.5))
-            (if b1? (fleven? (flceiling b1)) (flodd? (flfloor b1)))
-            (if b2? (fleven? (flfloor b2)) (flodd? (flceiling b2)))))
+  (define-values (b1 b2 b1? b2?) (real-interval-fields B))
+  (real-interval (if b1? (fl-/rndd (flceiling b1) 0.5) (fl+/rndd (flfloor b1) 0.5))
+                 (if b2? (fl+/rndu (flfloor b2) 0.5) (fl-/rndu (flceiling b2) 0.5))
+                 (if b1? (fleven? (flceiling b1)) (flodd? (flfloor b1)))
+                 (if b2? (fleven? (flfloor b2)) (flodd? (flceiling b2)))))
 
-(: fltruncate-pre (-> Nonempty-Interval Interval))
+(: fltruncate-pre (-> Nonempty-Real-Interval Real-Interval))
 (define (fltruncate-pre B)
-  (define-values (b1 b2 b1? b2?) (interval-fields B))
+  (define-values (b1 b2 b1? b2?) (real-interval-fields B))
   (define-values (a1 a1?)
     (cond [b1?   (let* ([a1   (flceiling b1)]
                         [a1?  (b1 . fl> . 0.0)])
@@ -59,7 +59,7 @@
           [else  (let* ([a2  (flceiling b2)]
                         [a2?  (a2 . fl< . 1.0)])
                    (values (if a2? (fl-/rndu a2 1.0) a2) a2?))]))
-  (interval a1 a2 a1? a2?))
+  (real-interval a1 a2 a1? a2?))
 
 (define-values (floor/bot floor/pre)
   (monotone/prim 'floor reals reals flfloor flfloor-img flfloor-pre))

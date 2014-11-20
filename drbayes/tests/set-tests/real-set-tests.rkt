@@ -8,22 +8,19 @@
 
 (time
  (for: ([_  (in-range 100000)])
-   (check-set-algebra 
-    equal?
-    real-set-member?
-    real-set-subseteq?
-    empty-real-set
-    reals
-    real-set-subtract
-    real-set-union
-    real-set-intersect
-    random-real-set
-    random-real)
    (check-bounded-lattice
     equal?
     real-set-subseteq?
-    real-set-union
+    real-set-join
     real-set-intersect
     empty-real-set
     reals
-    random-real-set)))
+    random-real-set)
+   (check-membership-lattice
+    empty-real-set?
+    real-set-member?
+    real-set-subseteq?
+    real-set-join
+    real-set-intersect
+    random-real-set
+    random-real)))

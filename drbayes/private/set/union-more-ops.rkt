@@ -24,18 +24,10 @@
 ;; ===================================================================================================
 ;; Extra constructors
 
-(: real-set (case-> (-> Full-Real-Set)
-                    (Flonum Flonum -> (U Nonempty-Interval Empty-Set))
-                    (Flonum Flonum Boolean Boolean -> (U Nonempty-Interval Empty-Set))))
-(define real-set
-  (case-lambda
-    [()  reals]
-    [(a b)
-     (define A (interval a b))
-     (if (empty-real-set? A) empty-set A)]
-    [(a b a? b?)
-     (define A (interval a b a? b?))
-     (if (empty-real-set? A) empty-set A)]))
+(: real-set (-> Flonum Flonum Boolean Boolean (U Nonempty-Real-Interval Empty-Set)))
+(define (real-set a b a? b?)
+  (define A (real-interval a b a? b?))
+  (if (empty-real-set? A) empty-set A))
 
 (: set-pair (case-> (Nonempty-Set Nonempty-Set -> Nonempty-Pair-Set)
                     (Set Set -> (U Empty-Set Nonempty-Pair-Set))))
@@ -164,9 +156,19 @@
         [(top-union? A)
          'top-union]))
 
-(: real-set-map* (-> (-> Nonempty-Interval Set) Real-Set Set))
+(: real-set-map* (-> (-> Nonempty-Real-Interval Set) Real-Set Set))
 (define (real-set-map* f I)
   (cond [(empty-real-set? I)  empty-set]
-        [(reals? I)  (f I)]
-        [else  (define Is (map f (nonextremal-real-set->list I)))
-               (foldr set-join empty-set Is)]))
+        [(or (reals? I) (Plain-Real-Interval? I))  (f I)]
+        [else
+         (for/fold ([B : Set  empty-set]) ([I  (in-list (Plain-Real-Interval-List-elements I))])
+           (set-join B (f I)))]))
+#|
+(: integer-set-map* (-> (-> Nonempty-Integer-Interval Set) Integer-Set Set))
+(define (integer-set-map* f I)
+  (cond [(empty-integer-set? I)  empty-set]
+        [(or (integers? I) (Plain-Integer-Interval? I))  (f I)]
+        [else
+         (for/fold ([B : Set  empty-set]) ([I  (in-list (Plain-Integer-Interval-List-elements I))])
+           (set-join B (f I)))]))
+|#

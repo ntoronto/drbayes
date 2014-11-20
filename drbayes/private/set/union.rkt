@@ -36,14 +36,14 @@
 ;; ===================================================================================================
 ;; Set types
 
-(define-type Nonextremal-Set
+(define-type Plain-Set
   (U Bot-Basic Top-Basic
      Bot-Tagged Top-Tagged
      Bot-Union Top-Union))
 
-(define-type Nonempty-Set (U Nonextremal-Set Universe))
-(define-type  Nonfull-Set (U Nonextremal-Set Empty-Set))
-(define-type          Set (U Nonextremal-Set Universe Empty-Set))
+(define-type Nonempty-Set (U Plain-Set Universe))
+(define-type  Nonfull-Set (U Plain-Set Empty-Set))
+(define-type          Set (U Plain-Set Universe Empty-Set))
 
 ;; ===================================================================================================
 ;; Pairs
@@ -54,12 +54,11 @@
 (define-singleton-type Empty-Pair-Set Base-Pair-Set empty-pair-set)
 (define-singleton-type Full-Pair-Set Base-Pair-Set pairs)
 
-(struct: Nonextremal-Pair-Set Base-Pair-Set ([fst : Nonempty-Set] [snd : Nonempty-Set])
-  #:transparent)
+(struct: Plain-Pair-Set Base-Pair-Set ([fst : Nonempty-Set] [snd : Nonempty-Set]) #:transparent)
 
-(define-type Nonfull-Pair-Set (U Nonextremal-Pair-Set Empty-Pair-Set))
-(define-type Nonempty-Pair-Set (U Nonextremal-Pair-Set Full-Pair-Set))
-(define-type Pair-Set (U Nonextremal-Pair-Set Full-Pair-Set Empty-Pair-Set))
+(define-type Nonfull-Pair-Set (U Plain-Pair-Set Empty-Pair-Set))
+(define-type Nonempty-Pair-Set (U Plain-Pair-Set Full-Pair-Set))
+(define-type Pair-Set (U Plain-Pair-Set Full-Pair-Set Empty-Pair-Set))
 
 ;; ===================================================================================================
 ;; Basic sets
@@ -78,16 +77,16 @@
      Empty-Pair-Set
      Empty-Store-Set))
 
-(define-type Nonextremal-Basic
-  (U Nonextremal-Real-Set
-     Nonextremal-Bool-Set
-     ;Nonextremal-Null-Set  ; there aren't any nonextremal null sets
-     Nonextremal-Pair-Set
-     Nonextremal-Store-Set))
+(define-type Plain-Basic
+  (U Plain-Real-Set
+     Plain-Bool-Set
+     ;Plain-Null-Set  ; there aren't any plain null sets
+     Plain-Pair-Set
+     Plain-Store-Set))
 
-(define-type Nonempty-Basic (U Nonextremal-Basic  Full-Basic))
-(define-type  Nonfull-Basic (U Nonextremal-Basic Empty-Basic))
-(define-type          Basic (U Nonextremal-Basic  Full-Basic Empty-Basic))
+(define-type Nonempty-Basic (U Plain-Basic Full-Basic))
+(define-type  Nonfull-Basic (U Plain-Basic Empty-Basic))
+(define-type          Basic (U Plain-Basic Full-Basic Empty-Basic))
 
 (: empty-basic? (Any -> Boolean : Empty-Basic))
 (define (empty-basic? A)

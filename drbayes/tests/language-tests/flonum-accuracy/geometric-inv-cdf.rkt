@@ -5,7 +5,7 @@
          (only-in typed/rackunit check-exn)
          "abstract-float.rkt")
 
-;; Buggy version: inexact 1-p is in the badlands of log, so relative error is unbounded
+;; Buggy version: 1-p ≈ 0 is inexact and in log's badlands, so relative error is unbounded
 (define/drbayes (flgeom u p)
   (fl/ (fllog u)
        (fllog (fl- (fl 1) p))))

@@ -5,8 +5,7 @@
          racket/performance-hint
          math/flonum
          racket/math
-         "flops.rkt"
-         "symmetric-log.rkt")
+         "flops.rkt")
 
 (provide (all-defined-out))
 
@@ -100,8 +99,6 @@
   (define-unary-flops/rnd flexpm1 flexpm1/error   -1.0 +inf.0)
   (define-unary-flops/rnd fllog1p fllog1p/error -inf.0 +inf.0)
   (define-unary-flops/rnd flrecip flrecip/error -inf.0 +inf.0)
-  
-  (define-unary-flops/rnd flprob->flonum flprob->flonum/error 0.0 1.0)
   
   (define-binary-flops/rnd fl+ fl+/error -inf.0 +inf.0)
   (define-binary-flops/rnd fl- fl-/error -inf.0 +inf.0)

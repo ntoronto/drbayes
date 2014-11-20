@@ -79,8 +79,8 @@
 
 (: pair->singleton ((Pair Value Value) -> Bot-Basic))
 (define (pair->singleton x)
-  (Nonextremal-Pair-Set (value->singleton (car x))
-                        (value->singleton (cdr x))))
+  (Plain-Pair-Set (value->singleton (car x))
+                  (value->singleton (cdr x))))
 
 (: tagged-value->singleton (tagged-value -> Bot-Tagged))
 (define (tagged-value->singleton v)

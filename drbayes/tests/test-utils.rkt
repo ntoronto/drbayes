@@ -29,9 +29,11 @@
 
 (: real-set->ivls (Nonempty-Real-Set -> (Listof ivl)))
 (define (real-set->ivls I)
-  (cond [(interval? I)  (define-values (a b a? b?) (interval-fields I))
-                        (list (ivl a b))]
-        [else  (append* (map real-set->ivls (interval-list-elements I)))]))
+  (cond [(or (reals? I) (Plain-Real-Interval? I))
+         (define-values (a b a? b?) (real-interval-fields I))
+         (list (ivl a b))]
+        [else
+         (append* (map real-set->ivls (Plain-Real-Interval-List-elements I)))]))
 
 (: maybe-pad-list (All (A) ((Listof A) Integer (-> A) -> (Listof A))))
 (define (maybe-pad-list lst n thnk)

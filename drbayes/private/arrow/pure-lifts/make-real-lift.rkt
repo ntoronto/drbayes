@@ -52,8 +52,8 @@
 ;; Not strictly monotone
 
 (: monotone/pre (-> Nonempty-Real-Set Nonempty-Real-Set
-                    (-> Nonempty-Interval Real-Set)
-                    (-> Nonempty-Interval Real-Set)
+                    (-> Nonempty-Real-Interval Real-Set)
+                    (-> Nonempty-Real-Interval Real-Set)
                     (-> Pre-Arrow)))
 (define ((monotone/pre X Y img pre))
   (define fun (make-pre-mapping-fun/memo))
@@ -68,8 +68,8 @@
 (: monotone/prim (-> Symbol
                      Nonempty-Real-Set Nonempty-Real-Set
                      (-> Flonum Value)
-                     (-> Nonempty-Interval Real-Set)
-                     (-> Nonempty-Interval Real-Set)
+                     (-> Nonempty-Real-Interval Real-Set)
+                     (-> Nonempty-Real-Interval Real-Set)
                      (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (monotone/prim name X Y f img pre)
   (values (real/bot name X Y f)

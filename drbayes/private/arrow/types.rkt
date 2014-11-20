@@ -8,8 +8,8 @@
 ;; ===================================================================================================
 ;; Indexes
 
-(define-type Interval-Splitter (-> Nonempty-Interval (Values (Listof Nonempty-Interval)
-                                                             (Listof Positive-Flonum))))
+(define-type Interval-Splitter (-> Nonempty-Real-Interval (Values (Listof Nonempty-Real-Interval)
+                                                                  (Listof Positive-Flonum))))
 
 (struct: random-index ([index : Store-Index]
                        [split : (U #f Interval-Splitter)])

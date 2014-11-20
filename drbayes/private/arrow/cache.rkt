@@ -55,7 +55,7 @@
     (cond [(not (cache?))
            (if (and (universe? A1) (universe? A2))
                pairs
-               (Nonextremal-Pair-Set A1 A2))]
+               (Plain-Pair-Set A1 A2))]
           [(and (eq? A1 last-A1) (eq? A2 last-A2))
            (register-pair-cache-hit!)
            last-A]

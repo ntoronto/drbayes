@@ -48,7 +48,6 @@
     (define x (random-flprob))
     (define y (random-flprob))
     (define-values (z z* e) (flop-error x y))
-    (unless (flprob? z) (printf "not flprob?: ~v ~v ~v~n" x y z))
     (when (or (flnan? x) (flnan? y))
       (unless (flnan? z)
         (printf "not nan-preserving: ~v ~v ~v~n" x y z)))
@@ -71,7 +70,8 @@
     (let ([x  (flstep (flonum->flprob x) (- (random 11) 5))]
           [y  (flstep (flonum->flprob y) (- (random 11) 5))])
       (define z (flop x y))
-      (unless (flprob? z) (printf "not flprob?: ~v ~v ~v~n" x y z)))
+      (when (and (flprob? x) (flprob? y))
+        (unless (flprob? z) (printf "not flprob?: ~v ~v ~v~n" x y z))))
     (when (zero? (modulo i 10000))
       (printf "i = ~v~n~n" i))))
 

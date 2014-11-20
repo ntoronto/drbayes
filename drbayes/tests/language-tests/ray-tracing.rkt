@@ -11,7 +11,7 @@
 (interval-max-splits 0)
 ;(interval-min-length (expt 0.5 5.0))
 
-(define n 10000)
+(define n 1000)
 
 (define/drbayes (vec+ lst1 lst2)
   (list (+ (list-ref lst1 0) (list-ref lst2 0))

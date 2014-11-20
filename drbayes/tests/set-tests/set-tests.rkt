@@ -160,7 +160,7 @@
         [(falses? A)  #f]
         [(nulls? A)  null]
         [(pairs? A)  (cons (random-universe-member) (random-universe-member))]
-        [(pair-set? A)  (match-define (Nonextremal-Pair-Set A1 A2) A)
+        [(pair-set? A)  (match-define (Plain-Pair-Set A1 A2) A)
                         (cons (random-set-member A1) (random-set-member A2))]
         [(store-set? A)  (store-set-realize A)]))
 

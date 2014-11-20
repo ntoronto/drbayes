@@ -12,7 +12,7 @@ symmetric distributions asymmetrically:
 > (inv-cdf (normal-dist 0 1) -min.0 #t)
 38.46740561714434
 
-*Symmetric logs* represent numbers p ∈ [0,1/2] using log(p), and numbers p ∈ (1/2,1] using -log(1-p).
+*Symmetric logs* represent numbers p ∈ [0,1/2] using log(p), and numbers p ∈ [1/2,1] using -log(1-p).
 
 One benefit is that -log(1-p) is an upper tail log probability, which both R and Racket's math
 library's inverse CDF implementations operate on directly. The normal distribution thus has a
@@ -20,7 +20,7 @@ symmetric effective range of about [-2e154,2e154].
 
 Another benefit is that -symlog(p) = symlog(1-p).
 
-One drawback is that symlog(p) ∈ [-∞,-log(2)] ∪ (log(2),∞], a crazier domain than log(p) ∈ [-∞,0].
+One drawback is that symlog(p) ∈ [-∞,-log(2)] ∪ [log(2),∞], a crazier domain than log(p) ∈ [-∞,0].
 
 Another drawback is that multiplication and division - which in log space are just addition and
 subtraction - are much more complicated.
@@ -31,10 +31,10 @@ subtraction - are much more complicated.
          "utils.rkt")
 
 (provide
- flonum->flprob flonum->flprob/rndd flonum->flprob/rndu
- flprob->flonum/error flprob->flonum
+ flprob-0 flprob-1
  flprob?
- flprob-normalize flprob-normalize/rndd flprob-normalize/rndu
+ flonum->flprob flonum->flprob/rndd flonum->flprob/rndu
+ flprob->flonum flprob->flonum/rndd flprob->flonum/rndu
  flprob1-
  flprob* flprob*/rndd flprob*/rndu
  flprob/ flprob//rndd flprob//rndu
@@ -42,65 +42,64 @@ subtraction - are much more complicated.
  flprob- flprob-/rndd flprob-/rndu
  flprob-midpoint
  flprob-random
+ flprob= flprob< flprob<= flprob> flprob>=
  )
 
-;; ===================================================================================================
-;; Predicates
-
-(: flprob-not-nan? (-> Flonum Boolean))
-(define (flprob-not-nan? x)
-  (or (<= x (fllog 0.5))
-      (< (fllog 2.0) x)))
+(define flprob-0 -inf.0)
+(define flprob-1 +inf.0)
 
 (: flprob? (-> Flonum Boolean))
 (define (flprob? x)
-  (or (flprob-not-nan? x)
-      (flnan? x)))
+  (or (<= x (fllog 0.5))
+      (<= (fllog 2.0) x)))
 
 ;; ===================================================================================================
 ;; Directed rounding
 
+;(: flprob-fast-canonicalize (-> Flonum Flonum))
+;; Correct when x is no more than a few ulps inside of (-log(2),log(2))
+(define-syntax-rule (flprob-fast-canonicalize x-stx)
+  (let ([x : Flonum  x-stx])
+    (cond [(<= x (fllog 0.5))  x]
+          [(< x 0.0)  (+ (fllog 2.0) (- x (fllog 0.5)))]
+          [(< x (fllog 2.0))  (+ (fllog 0.5) (- x (fllog 2.0)))]
+          [else  x])))
+
 (: make-flprob-fun (-> (-> Flonum (Values Flonum Flonum))
                        (-> Flonum Flonum)))
 (define ((make-flprob-fun flop/error) x)
-  (define-values (z.hi z.lo) (flop/error x))
-  (define z (+ z.hi z.lo))
-  (if (= z (fllog 2.0)) (fllog 0.5) z))
+  (define-values (y.hi y.lo) (flop/error x))
+  (flprob-fast-canonicalize (+ y.hi y.lo)))
 
 (: make-flprob-fun/rndd (-> (-> Flonum (Values Flonum Flonum))
                             (-> Flonum Flonum)))
 (define ((make-flprob-fun/rndd flop/error) x)
-  (define-values (z.hi z.lo) (flop/error x))
-  (define z (if (< z.lo 0.0) (flprev* z.hi) z.hi))
-  (if (= z (fllog 2.0)) (fllog 0.5) z))
+  (define-values (y.hi y.lo) (flop/error x))
+  (flprob-fast-canonicalize (if (< y.lo 0.0) (flprev* y.hi) y.hi)))
 
 (: make-flprob-fun/rndu (-> (-> Flonum (Values Flonum Flonum))
                             (-> Flonum Flonum)))
 (define ((make-flprob-fun/rndu flop/error) x)
-  (define-values (z.hi z.lo) (flop/error x))
-  (define z (if (> z.lo 0.0) (flnext* z.hi) z.hi))
-  (if (= z (fllog 2.0)) (fllog 0.5) z))
+  (define-values (y.hi y.lo) (flop/error x))
+  (flprob-fast-canonicalize (if (> y.lo 0.0) (flnext* y.hi) y.hi)))
 
 (: make-flprob-2d-fun (-> (-> Flonum Flonum (Values Flonum Flonum))
                           (-> Flonum Flonum Flonum)))
 (define ((make-flprob-2d-fun flop/error) x y)
   (define-values (z.hi z.lo) (flop/error x y))
-  (define z (+ z.hi z.lo))
-  (if (= z (fllog 2.0)) (fllog 0.5) z))
+  (flprob-fast-canonicalize (+ z.hi z.lo)))
 
 (: make-flprob-2d-fun/rndd (-> (-> Flonum Flonum (Values Flonum Flonum))
                                (-> Flonum Flonum Flonum)))
 (define ((make-flprob-2d-fun/rndd flop/error) x y)
   (define-values (z.hi z.lo) (flop/error x y))
-  (define z (if (< z.lo 0.0) (flprev* z.hi) z.hi))
-  (if (= z (fllog 2.0)) (fllog 0.5) z))
+  (flprob-fast-canonicalize (if (< z.lo 0.0) (flprev* z.hi) z.hi)))
 
 (: make-flprob-2d-fun/rndu (-> (-> Flonum Flonum (Values Flonum Flonum))
                                (-> Flonum Flonum Flonum)))
 (define ((make-flprob-2d-fun/rndu flop/error) x y)
   (define-values (z.hi z.lo) (flop/error x y))
-  (define z (if (> z.lo 0.0) (flnext* z.hi) z.hi))
-  (if (= z (fllog 2.0)) (fllog 0.5) z))
+  (flprob-fast-canonicalize (if (> z.lo 0.0) (flnext* z.hi) z.hi)))
 
 ;; ===================================================================================================
 ;; Conversion
@@ -118,7 +117,7 @@ subtraction - are much more complicated.
 
 (: flprob->flonum/error (-> Flonum (Values Flonum Flonum)))
 (define (flprob->flonum/error x)
-  (cond [(not (flprob-not-nan? x))  (values +nan.0 0.0)]
+  (cond [(not (flprob? x))  (values +nan.0 0.0)]
         [(< x 0.0)  (flexp/error x)]
         [else  (let-values ([(y.hi y.lo)  (flexpm1/error (- x))])
                  (values (- y.hi) (- y.lo)))]))
@@ -127,31 +126,23 @@ subtraction - are much more complicated.
 (define (flprob->flonum x)
   (define-values (y.hi y.lo) (flprob->flonum/error x))
   (min 1.0 (max 0.0 (+ y.hi y.lo))))
+ 
+(: flprob->flonum/rndd (-> Flonum Flonum))
+(define (flprob->flonum/rndd x)
+  (define-values (y.hi y.lo) (flprob->flonum/error x))
+  (min 1.0 (max 0.0 (if (< y.lo 0.0) (flprev* y.hi) y.hi))))
 
-;; ===================================================================================================
-;; Normalization: put any nonzero symmetric log probability in the range [-∞,-log(2)] ∪ (log(2),∞]
-
-(: flprob-normalize/error (-> Flonum (Values Flonum Flonum)))
-(define (flprob-normalize/error x)
-  (cond [(flprob? x)  (values x 0.0)]
-        [(zero? x)    (values +nan.0 0.0)]
-        [else
-         (let*-values ([(x sgn)  (if (> x 0.0) (values (- x) 1.0) (values x -1.0))]
-                       [(x.hi x.lo)  (flexpm1/error x)]
-                       [(x.hi x.lo)  (fl2log (- x.hi) (- x.lo))])
-           (values (* x.hi sgn) (* x.lo sgn)))]))
-
-(define flprob-normalize (make-flprob-fun flprob-normalize/error))
-(define flprob-normalize/rndd (make-flprob-fun/rndd flprob-normalize/error))
-(define flprob-normalize/rndu (make-flprob-fun/rndu flprob-normalize/error))
+(: flprob->flonum/rndu (-> Flonum Flonum))
+(define (flprob->flonum/rndu x)
+  (define-values (y.hi y.lo) (flprob->flonum/error x))
+  (min 1.0 (max 0.0 (if (> y.lo 0.0) (flnext* y.hi) y.hi))))
 
 ;; ===================================================================================================
 ;; Complement
 
 (: flprob1- (-> Flonum Flonum))
 (define (flprob1- x)
-  (cond [(or (< x (fllog 0.5)) (< (fllog 2.0) x))  (- x)]
-        [(= x (fllog 0.5))  x]
+  (cond [(or (<= x (fllog 0.5)) (<= (fllog 2.0) x))  (- x)]
         [else  +nan.0]))
 
 ;; ===================================================================================================
@@ -159,7 +150,7 @@ subtraction - are much more complicated.
 
 (: flprob*/error (-> Flonum Flonum (Values Flonum Flonum)))
 (define (flprob*/error x y)
-  (if (not (and (flprob-not-nan? x) (flprob-not-nan? y)))
+  (if (not (and (flprob? x) (flprob? y)))
       (values +nan.0 0.0)
       (let ([x  (max x y)]
             [y  (min x y)])
@@ -208,7 +199,7 @@ subtraction - are much more complicated.
 
 (: flprob//error (-> Flonum Flonum (Values Flonum Flonum)))
 (define (flprob//error x y)
-  (cond [(not (and (flprob-not-nan? x) (flprob-not-nan? y)))  (values +nan.0 0.0)]
+  (cond [(not (and (flprob? x) (flprob? y)))  (values +nan.0 0.0)]
         [(< y x)  (values +nan.0 0.0)]       ; Result is > 1
         [(= y -inf.0)  (values +nan.0 0.0)]  ; Dividing by 0
         [(= x -inf.0)  (values x 0.0)]       ; Dividing 0
@@ -254,7 +245,7 @@ subtraction - are much more complicated.
 
 (: flprob+/error (-> Flonum Flonum (Values Flonum Flonum)))
 (define (flprob+/error x y)
-  (cond [(not (and (flprob-not-nan? x) (flprob-not-nan? y)))  (values +nan.0 0.0)]
+  (cond [(not (and (flprob? x) (flprob? y)))  (values +nan.0 0.0)]
         [(> x (- y))  (values +nan.0 0.0)]  ; Result > 1
         [(= x (- y))  (values +inf.0 0.0)]  ; Result = 1
         [else
@@ -291,7 +282,7 @@ subtraction - are much more complicated.
 
 (: flprob-/error (-> Flonum Flonum (Values Flonum Flonum)))
 (define (flprob-/error x y)
-  (cond [(not (and (flprob-not-nan? x) (flprob-not-nan? y)))  (values +nan.0 0.0)]
+  (cond [(not (and (flprob? x) (flprob? y)))  (values +nan.0 0.0)]
         [(< x y)  (values +nan.0 0.0)]             ; Result would be negative
         [(= x y)  (values -inf.0 0.0)]             ; Subtracting same number
         [(= x +inf.0)  (values (flprob1- y) 0.0)]  ; Subtracting from 1
@@ -311,7 +302,7 @@ subtraction - are much more complicated.
                          [(z.hi z.lo)  (cond [(fl2positive? z.hi z.lo)  (values 0.0 0.0)]
                                              [else                      (values z.hi z.lo)])])
              (fl2log (- z.hi) (- z.lo))))
-         (if (<= (+ z.hi z.lo) (fllog 0.5))
+         (if (fl2<= z.hi z.lo (fllog 0.5) 0.0)
              (values z.hi z.lo)
              (let ([x  (max (- x) y)]
                    [y  (min (- x) y)])
@@ -337,35 +328,30 @@ subtraction - are much more complicated.
 (: flprob-midpoint (-> Flonum Flonum Flonum))
 ;; Greatest observed error is 1.5252 ulps
 (define (flprob-midpoint x y)
-  (cond
-    [(not (and (flprob-not-nan? x) (flprob-not-nan? y)))  +nan.0]
-    [else
-     (: z Flonum)
-     (define z
-       (let loop ([x x] [y y])
-         (cond [(> x (- y))  (- (loop (- x) (- y)))]
-               [(= x y)  x]
-               [(= x (- y))  (fllog 0.5)]
-               [else
-                (let ([x  (max x y)]
-                      [y  (min x y)])
-                  (cond [(< x 0.0)
-                         (+ (fllog 0.5) (+ x (fllog1p (flexp (fl- y x)))))]
-                        [else
-                         (+ (fllog 0.5) (fllog1p (- (flexp y) (flexp (- x)))))]))])))
-     (if (= z (fllog 2.0)) (fllog 0.5) z)]))
+  (if (not (and (flprob? x) (flprob? y)))
+      +nan.0
+      (let loop ([x x] [y y])
+        (cond [(> x (- y))  (- (loop (- x) (- y)))]
+              [(= x y)  x]
+              [(= x (- y))  (fllog 0.5)]
+              [else
+               (let ([x  (max x y)]
+                     [y  (min x y)])
+                 (cond [(< x 0.0)
+                        (+ (fllog 0.5) (+ x (fllog1p (flexp (fl- y x)))))]
+                       [else
+                        (+ (fllog 0.5) (fllog1p (- (flexp y) (flexp (- x)))))]))]))))
 
 ;; ===================================================================================================
 ;; Random probability
 
 (: flprob-random (-> Flonum Flonum Flonum))
 (define (flprob-random a b)
-  (if (not (and (flprob-not-nan? a) (flprob-not-nan? b)))
+  (if (not (and (flprob? a) (flprob? b)))
       +nan.0
       (let ([a  (min a b)] [b  (max a b)])
         (cond [(<= b (fllog 0.5))  (fllog-random a b)]
-              [(<= (fllog 2.0) a)  (define x (- (fllog-random (- b) (- a))))
-                                   (if (= x (fllog 2.0)) (fllog 0.5) x)]
+              [(<= (fllog 2.0) a)  (- (fllog-random (- b) (- a)))]
               [else
                (define pa (flexpm1 (- a (fllog 0.5))))
                (define pb (flexpm1 (- (fllog 2.0) b)))
@@ -374,5 +360,20 @@ subtraction - are much more complicated.
                             [else       (> r (/ pb (+ pa pb)))])
                       (fllog-random a (fllog 0.5))]
                      [else
-                      (define x (- (fllog-random (- b) (fllog 0.5))))
-                      (if (= x (fllog 2.0)) (fllog 0.5) x)])]))))
+                      (- (fllog-random (- b) (fllog 0.5)))])]))))
+
+;; ===================================================================================================
+;; Comparison
+
+;(: make-flprob-comp-fun (-> (-> Flonum Flonum Boolean) (-> Flonum Flonum Boolean)))
+(define-syntax-rule (make-flprob-comp-fun f)
+  (λ ([x : Flonum] [y : Flonum])
+    (let ([x  (if (= x (fllog 2.0)) (fllog 0.5) x)]
+          [y  (if (= y (fllog 2.0)) (fllog 0.5) y)])
+      (f x y))))
+
+(define flprob=  (make-flprob-comp-fun fl=))
+(define flprob<  (make-flprob-comp-fun fl<))
+(define flprob<= (make-flprob-comp-fun fl<=))
+(define flprob>  (make-flprob-comp-fun fl>))
+(define flprob>= (make-flprob-comp-fun fl>=))

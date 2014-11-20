@@ -13,10 +13,10 @@
 (define-singleton-type True-Bool-Set Base-Bool-Set trues)
 (define-singleton-type False-Bool-Set Base-Bool-Set falses)
 
-(define-type Nonextremal-Bool-Set (U True-Bool-Set False-Bool-Set))
-(define-type Nonfull-Bool-Set (U Nonextremal-Bool-Set Empty-Bool-Set))
-(define-type Nonempty-Bool-Set (U Nonextremal-Bool-Set Full-Bool-Set))
-(define-type Bool-Set (U Nonextremal-Bool-Set Empty-Bool-Set Full-Bool-Set))
+(define-type Plain-Bool-Set (U True-Bool-Set False-Bool-Set))
+(define-type Nonfull-Bool-Set (U Plain-Bool-Set Empty-Bool-Set))
+(define-type Nonempty-Bool-Set (U Plain-Bool-Set Full-Bool-Set))
+(define-type Bool-Set (U Plain-Bool-Set Empty-Bool-Set Full-Bool-Set))
 
 (: bool-set-member? (Bool-Set Boolean -> Boolean))
 (define (bool-set-member? A x)
@@ -46,7 +46,7 @@
         [(eq? A B)  A]
         [else  empty-bool-set]))
 
-(: bool-set-complement (case-> (Nonextremal-Bool-Set -> Nonextremal-Bool-Set)
+(: bool-set-complement (case-> (Plain-Bool-Set -> Plain-Bool-Set)
                                (Nonempty-Bool-Set -> Nonfull-Bool-Set)
                                (Nonfull-Bool-Set -> Nonempty-Bool-Set)
                                (Bool-Set -> Bool-Set)))
@@ -56,7 +56,7 @@
         [(falses? A)  trues]
         [else   falses]))
 
-(: bool-set-subtract (case-> (Full-Bool-Set Nonextremal-Bool-Set -> Nonextremal-Bool-Set)
+(: bool-set-subtract (case-> (Full-Bool-Set Plain-Bool-Set -> Plain-Bool-Set)
                              (Full-Bool-Set Nonfull-Bool-Set -> Nonempty-Bool-Set)
                              (Bool-Set Nonempty-Bool-Set -> Nonfull-Bool-Set)
                              (Bool-Set Bool-Set -> Bool-Set)))
@@ -92,7 +92,7 @@
         [(trues? A)   (values #t #f)]
         [else         (values #f #t)]))
 
-(: boolean->singleton (Boolean -> Nonextremal-Bool-Set))
+(: boolean->singleton (Boolean -> Plain-Bool-Set))
 (define (boolean->singleton b)
   (if b trues falses))
 

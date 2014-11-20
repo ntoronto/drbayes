@@ -19,15 +19,15 @@
   (bot-basic
    (real-set-map
     (λ (A)
-      (let-values ([(a1 a2 a1? a2?)  (let-values ([(a1 a2 a1? a2?)  (interval-fields A)])
+      (let-values ([(a1 a2 a1? a2?)  (let-values ([(a1 a2 a1? a2?)  (real-interval-fields A)])
                                        (cond [inc1?  (values a1 a2 a1? a2?)]
                                              [else   (values a2 a1 a2? a1?)]))])
         (real-set-map
          (λ (B)
-           (let-values ([(b1 b2 b1? b2?)  (let-values ([(b1 b2 b1? b2?)  (interval-fields B)])
+           (let-values ([(b1 b2 b1? b2?)  (let-values ([(b1 b2 b1? b2?)  (real-interval-fields B)])
                                             (cond [inc2?  (values b1 b2 b1? b2?)]
                                                   [else   (values b2 b1 b2? b1?)]))])
-             (interval (f/rndd a1 b1) (f/rndu a2 b2) (and a1? b1?) (and a2? b2?))))
+             (real-interval (f/rndd a1 b1) (f/rndu a2 b2) (and a1? b1?) (and a2? b2?))))
          (set-take-reals B))))
     (set-take-reals A))))
 
@@ -36,9 +36,9 @@
 
 (struct: trijection ([inc1? : Boolean]
                      [inc2? : Boolean]
-                     [domain1 : Nonempty-Interval]
-                     [domain2 : Nonempty-Interval]
-                     [range : Nonempty-Interval]
+                     [domain1 : Nonempty-Real-Interval]
+                     [domain2 : Nonempty-Real-Interval]
+                     [range : Nonempty-Real-Interval]
                      [fc/rndd : (-> Flonum Flonum Flonum)]
                      [fc/rndu : (-> Flonum Flonum Flonum)]
                      [fa/rndd : (-> Flonum Flonum Flonum)]
@@ -180,36 +180,36 @@ b = log(c)/log(a)
 
 (define trij-expt++
   (trijection #t #t
-              (Nonextremal-Interval 1.0 +inf.0 #f #f)
+              (Plain-Real-Interval 1.0 +inf.0 #f #f)
               positive-interval
-              (Nonextremal-Interval 1.0 +inf.0 #f #f)
+              (Plain-Real-Interval 1.0 +inf.0 #f #f)
               flexpt/rndd flexpt/rndu
               (zeros1+ flexptinv1/rndd) (zeros1+ flexptinv1/rndu)
               flexptinv2/rndd flexptinv2/rndu))
 
 (define trij-expt+-
   (trijection #f #t
-              (Nonextremal-Interval 1.0 +inf.0 #f #f)
+              (Plain-Real-Interval 1.0 +inf.0 #f #f)
               negative-interval
-              (Nonextremal-Interval 0.0 1.0 #f #f)
+              (Plain-Real-Interval 0.0 1.0 #f #f)
               flexpt/rndd flexpt/rndu
               flexptinv1/rndd flexptinv1/rndu
               flexptinv2/rndd flexptinv2/rndu))
 
 (define trij-expt-+
   (trijection #t #f
-              (Nonextremal-Interval 0.0 1.0 #f #f)
+              (Plain-Real-Interval 0.0 1.0 #f #f)
               positive-interval
-              (Nonextremal-Interval 0.0 1.0 #f #f)
+              (Plain-Real-Interval 0.0 1.0 #f #f)
               flexpt/rndd flexpt/rndu
               (zeros2+ (zeros1+ flexptinv1/rndd)) (zeros2+ (zeros1+ flexptinv1/rndu))
               flexptinv2/rndd flexptinv2/rndu))
 
 (define trij-expt--
   (trijection #f #f
-              (Nonextremal-Interval 0.0 1.0 #f #f)
+              (Plain-Real-Interval 0.0 1.0 #f #f)
               negative-interval
-              (Nonextremal-Interval 1.0 +inf.0 #f #f)
+              (Plain-Real-Interval 1.0 +inf.0 #f #f)
               flexpt/rndd flexpt/rndu
               flexptinv1/rndd flexptinv1/rndu
               flexptinv2/rndd flexptinv2/rndu))

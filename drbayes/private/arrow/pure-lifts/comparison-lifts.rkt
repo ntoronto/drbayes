@@ -18,28 +18,28 @@
 (define >=/bot (real2d/bot '>= reals reals bools fl>=))
 (define =/bot (real2d/bot '= reals reals bools fl=))
 
-(: real-set-first (-> Nonempty-Real-Set Nonempty-Interval))
+(: real-set-first (-> Nonempty-Real-Set Nonempty-Real-Interval))
 (define (real-set-first A)
   (cond [(reals? A)  A]
-        [(Nonextremal-Interval? A)  A]
-        [else  (first (interval-list-elements A))]))
+        [(Plain-Real-Interval? A)  A]
+        [else  (first (Plain-Real-Interval-List-elements A))]))
 
-(: real-set-last (-> Nonempty-Real-Set Nonempty-Interval))
+(: real-set-last (-> Nonempty-Real-Set Nonempty-Real-Interval))
 (define (real-set-last A)
   (cond [(reals? A)  A]
-        [(Nonextremal-Interval? A)  A]
-        [else  (last (interval-list-elements A))]))
+        [(Plain-Real-Interval? A)  A]
+        [else  (last (Plain-Real-Interval-List-elements A))]))
 
 (: real-set-lt? (-> Nonempty-Real-Set Nonempty-Real-Set Boolean))
 (define (real-set-lt? A B)
-  (define-values (a1 a2 a1? a2?) (interval-fields (real-set-last A)))
-  (define-values (b1 b2 b1? b2?) (interval-fields (real-set-first B)))
+  (define-values (a1 a2 a1? a2?) (real-interval-fields (real-set-last A)))
+  (define-values (b1 b2 b1? b2?) (real-interval-fields (real-set-first B)))
   (or (fl< a2 b1) (and (fl= a2 b1) (not (and a2? b1?)))))
 
 (: real-set-gte? (-> Nonempty-Real-Set Nonempty-Real-Set Boolean))
 (define (real-set-gte? A B)
-  (define-values (a1 a2 a1? a2?) (interval-fields (real-set-first A)))
-  (define-values (b1 b2 b1? b2?) (interval-fields (real-set-last B)))
+  (define-values (a1 a2 a1? a2?) (real-interval-fields (real-set-first A)))
+  (define-values (b1 b2 b1? b2?) (real-interval-fields (real-set-last B)))
   (fl<= b2 a1))
 
 (: bool-set-not (-> Bool-Set Bool-Set))
@@ -63,12 +63,12 @@
   (define-values (A B) (set-projs AB))
   (real-set-map*
    (λ (A)
-     (define-values (a1 a2 a1? a2?) (interval-fields A))
+     (define-values (a1 a2 a1? a2?) (real-interval-fields A))
      (real-set-map*
       (λ (B)
-        (define-values (b1 b2 b1? b2?) (interval-fields B))
-        (set-pair (set-intersect A (bot-basic (interval -inf.0 b2 #f #f)))
-                  (set-intersect B (bot-basic (interval a1 +inf.0 #f #f)))))
+        (define-values (b1 b2 b1? b2?) (real-interval-fields B))
+        (set-pair (set-intersect A (bot-basic (real-interval -inf.0 b2 #f #f)))
+                  (set-intersect B (bot-basic (real-interval a1 +inf.0 #f #f)))))
       (set-take-reals B)))
    (set-take-reals A)))
 
@@ -77,12 +77,12 @@
   (define-values (A B) (set-projs A×B))
   (real-set-map*
    (λ (A)
-     (define-values (a1 a2 a1? a2?) (interval-fields A))
+     (define-values (a1 a2 a1? a2?) (real-interval-fields A))
      (real-set-map*
       (λ (B)
-        (define-values (b1 b2 b1? b2?) (interval-fields B))
-        (set-pair (set-intersect A (bot-basic (interval b1 +inf.0 b1? #f)))
-                  (set-intersect B (bot-basic (interval -inf.0 a2 #f a2?)))))
+        (define-values (b1 b2 b1? b2?) (real-interval-fields B))
+        (set-pair (set-intersect A (bot-basic (real-interval b1 +inf.0 b1? #f)))
+                  (set-intersect B (bot-basic (real-interval -inf.0 a2 #f a2?)))))
       (set-take-reals B)))
    (set-take-reals A)))
 

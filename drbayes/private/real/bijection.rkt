@@ -10,7 +10,7 @@
 ;; ===================================================================================================
 ;; Image computation for monotone R -> R functions
 
-(: monotone-apply (-> (-> Nonempty-Interval Real-Set) Set Set))
+(: monotone-apply (-> (-> Nonempty-Real-Interval Real-Set) Set Set))
 (define (monotone-apply f A)
   (define B (real-set-map f (set-take-reals A)))
   (if (empty-real-set? B) empty-set B))
@@ -18,17 +18,17 @@
 (: strictly-monotone-image (-> Boolean (-> Flonum Flonum) (-> Flonum Flonum) Set Set))
 (define (strictly-monotone-image inc? f/rndd f/rndu A)
   (monotone-apply (λ (A)
-                    (define-values (a1 a2 a1? a2?) (interval-fields A))
-                    (cond [inc?  (interval (f/rndd a1) (f/rndu a2) a1? a2?)]
-                          [else  (interval (f/rndd a2) (f/rndu a1) a2? a1?)]))
+                    (define-values (a1 a2 a1? a2?) (real-interval-fields A))
+                    (cond [inc?  (real-interval (f/rndd a1) (f/rndu a2) a1? a2?)]
+                          [else  (real-interval (f/rndd a2) (f/rndu a1) a2? a1?)]))
                   A))
 
 ;; ===================================================================================================
 ;; Bijections (invertible functions and their inverses)
 
 (struct: bijection ([inc? : Boolean]
-                    [domain : Nonempty-Interval]
-                    [range : Nonempty-Interval]
+                    [domain : Nonempty-Real-Interval]
+                    [range : Nonempty-Real-Interval]
                     [fb/rndd : (-> Flonum Flonum)]
                     [fb/rndu : (-> Flonum Flonum)]
                     [fa/rndd : (-> Flonum Flonum)]
@@ -76,7 +76,7 @@
 (define bij-log (bijection-inverse bij-exp))
 
 (define bij-expm1
-  (bijection #t reals (Nonextremal-Interval -1.0 +inf.0 #f #f)
+  (bijection #t reals (Plain-Real-Interval -1.0 +inf.0 #f #f)
              flexpm1/rndd flexpm1/rndu
              fllog1p/rndd fllog1p/rndu))
 
@@ -106,8 +106,8 @@
 
 (define bij-asin
   (bijection #t
-             (Nonextremal-Interval -1.0 1.0 #t #t)
-             (Nonextremal-Interval (* 0.5 -pi/rndd) (* 0.5 +pi/rndu) #t #t)
+             (Plain-Real-Interval -1.0 1.0 #t #t)
+             (Plain-Real-Interval (* 0.5 -pi/rndd) (* 0.5 +pi/rndu) #t #t)
              flasin/rndd flasin/rndu
              flsin/rndd  flsin/rndu))
 
@@ -115,8 +115,8 @@
 
 (define bij-acos
   (bijection #f
-             (Nonextremal-Interval -1.0 1.0 #t #t)
-             (Nonextremal-Interval 0.0 +pi/rndu #t #t)
+             (Plain-Real-Interval -1.0 1.0 #t #t)
+             (Plain-Real-Interval 0.0 +pi/rndu #t #t)
              flacos/rndd flacos/rndu
              flcos/rndd  flcos/rndu))
 
