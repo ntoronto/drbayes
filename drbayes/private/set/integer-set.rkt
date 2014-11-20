@@ -26,7 +26,9 @@
   +inf?
   #:comparisons equal? int<
   #:guards
-  (λ (a b a? b?) (or (+inf? a) (-inf? b)))
+  (λ (a b a? b?) (or (+inf? a)
+                     (-inf? b)
+                     (and (integer? a) (integer? b) (= 1 (- b a)) (not a?) (not b?))))
   (λ (a b a? b?) (and (-inf? a) (+inf? b)))
   (λ (a b a? b?) (values a b (if (-inf? a) #f a?) (if (+inf? b) #f b?)))
   )

@@ -274,14 +274,18 @@
                          [else
                           ;; ------           ------
                           ;;    ------   or      ---
-                          (define I (assert (name-interval a2 b1 a2? b1?) Plain-Name-Interval?))
-                          (cons I (interval-list-intersect (cdr I1) I2))])]
+                          (define I (name-interval a2 b1 a2? b1?))
+                          (cond [(empty-name-set? I)  (interval-list-intersect (cdr I1) I2)]
+                                [else  (let ([I  (assert I Plain-Name-Interval?)])
+                                         (cons I (interval-list-intersect (cdr I1) I2)))])])]
                   [else
                    (cond [(max<? b2 b2? b1 b1?)
                           ;;    ------        ------
                           ;; ------      or   ---
-                          (define I (assert (name-interval a1 b2 a1? b2?) Plain-Name-Interval?))
-                          (cons I (interval-list-intersect I1 (cdr I2)))]
+                          (define I (name-interval a1 b2 a1? b2?))
+                          (cond [(empty-name-set? I)  (interval-list-intersect I1 (cdr I2))]
+                                [else  (let ([I  (assert I Plain-Name-Interval?)])
+                                         (cons I (interval-list-intersect I1 (cdr I2))))])]
                          [else
                           ;;   --             ---        ---           ------
                           ;; ------   or   ------   or   ------   or   ------
