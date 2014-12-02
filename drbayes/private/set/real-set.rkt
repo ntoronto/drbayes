@@ -46,35 +46,3 @@
               (Plain-Real-Interval-max I)
               (Plain-Real-Interval-min? I)
               (Plain-Real-Interval-max? I))))
-
-(: real-interval-sample-point (-> Plain-Real-Interval Flonum))
-(define (real-interval-sample-point I)
-  (match-define (Plain-Real-Interval a b a? b?) I)
-  (define m (- b a))
-  (define x (+ a (* m (random))))
-  (cond [(and (or (not (= x a)) a?) (or (not (= x b)) b?))  x]
-        [(and a? b?)  (* 0.5 (+ a b))]
-        [a?  a]
-        [b?  b]
-        [else  (* 0.5 (+ a b))]))
-
-(: real-interval-measure (-> Real-Interval Flonum))
-(define (real-interval-measure I)
-  (cond [(empty-real-set? I)  0.0]
-        [(reals? I)   +inf.0]
-        [else  (- (Plain-Real-Interval-max I) (Plain-Real-Interval-min I))]))
-
-(: real-set-sample-point (-> Plain-Real-Set Flonum))
-(define (real-set-sample-point I)
-  (cond [(Plain-Real-Interval? I)  (real-interval-sample-point I)]
-        [else
-         (define Is (Plain-Real-Interval-List-elements I))
-         (define i (sample-index (normalize-probs/+2 (map/+2 real-interval-measure Is))))
-         (real-interval-sample-point (list-ref Is i))]))
-
-(: real-set-measure (-> Real-Set Flonum))
-(define (real-set-measure I)
-  (cond [(empty-real-set? I)  0.0]
-        [(reals? I)  +inf.0]
-        [(Plain-Real-Interval? I)   (real-interval-measure I)]
-        [else  (flsum (map real-interval-measure (Plain-Real-Interval-List-elements I)))]))

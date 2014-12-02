@@ -4,6 +4,7 @@
          racket/flonum
          racket/match
          "../set.rkt"
+         "../flonum.rkt"
          "types.rkt"
          "pure-arrows.rkt"
          "pure-lifts.rkt")
@@ -48,8 +49,8 @@
 
 (define ifte*/proc ifte/proc)
 
-(: random/proc (-> Proc-Arrow))
-(define ((random/proc) a) (random))
+(: store-uniform/proc (-> Proc-Arrow))
+(define ((store-uniform/proc) a) (prob-random prob-0 prob-1))
 
 (: boolean/proc (Flonum -> Proc-Arrow))
 (define ((boolean/proc p) a) ((random) . < . p))
@@ -99,8 +100,6 @@
 (define (ceiling/proc) (lower/proc (ceiling/bot)))
 (define (round/proc) (lower/proc (round/bot)))
 (define (truncate/proc) (lower/proc (truncate/bot)))
-(define (cauchy/proc) (lower/proc (cauchy/bot)))
-(define (normal/proc) (lower/proc (normal/bot)))
 (define (abs/proc) (lower/proc (abs/bot)))
 (define (sqr/proc) (lower/proc (sqr/bot)))
 (define (recip/proc) (lower/proc (recip/bot)))
@@ -111,6 +110,10 @@
 (define (-/proc) (lower/proc (-/bot)))
 (define (*/proc) (lower/proc (*/bot)))
 (define (//proc) (lower/proc (//bot)))
+
+(define (normal-inv-cdf/proc) (lower/proc (normal-inv-cdf/bot)))
+(define (cauchy-inv-cdf/proc) (lower/proc (cauchy-inv-cdf/bot)))
+(define (uniform-inv-cdf/proc) (lower/proc (uniform-inv-cdf/bot)))
 
 (define (zero?/proc) (lower/proc (zero?/bot)))
 (define (negative?/proc) (lower/proc (negative?/bot)))

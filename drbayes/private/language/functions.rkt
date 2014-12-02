@@ -3,7 +3,9 @@
 (require racket/flonum
          math/flonum
          math/distributions
-         "../set.rkt"
+         "../set/value.rkt"
+         "../set/types.rkt"
+         "../flonum.rkt"
          "../arrow.rkt")
 
 (provide (all-defined-out))
@@ -53,11 +55,20 @@
 (define translate (λ: ([x : Real] [y : Real]) (+ (fl x) (fl y))))
 (define (fail) (error 'fail "failure"))
 
-(define (random-std-normal)
-  (flvector-ref (flnormal-sample 0.0 1.0 1) 0))
+(define (store-uniform)
+  (prob-random prob-0 prob-1))
 
-(define (random-std-cauchy)
-  (flvector-ref (flcauchy-sample 0.0 1.0 1) 0))
+(: normal-inv-cdf (-> Prob Flonum))
+(define (normal-inv-cdf p)
+  (assert ((normal-inv-cdf/proc) p) flonum?))
+
+(: cauchy-inv-cdf (-> Prob Flonum))
+(define (cauchy-inv-cdf p)
+  (assert ((cauchy-inv-cdf/proc) p) flonum?))
+
+(: uniform-inv-cdf (-> Prob Flonum))
+(define (uniform-inv-cdf p)
+  (assert ((uniform-inv-cdf/proc) p) flonum?))
 
 (: uniform (Real Real -> Flonum))
 (define (uniform a b)

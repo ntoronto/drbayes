@@ -23,7 +23,4 @@
     store-set-join
     store-set-intersect
     random-store-set
-    (λ ([S : Store-Set])
-      (if (empty-store-set? S)
-          (raise-argument-error 'store-set-realize "Nonempty-Store-Set" S)
-          (store-set-realize S))))))
+    random-store)))

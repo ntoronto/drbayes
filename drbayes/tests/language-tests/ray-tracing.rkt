@@ -8,10 +8,12 @@
 
 (printf "starting...~n")
 
-(interval-max-splits 0)
-;(interval-min-length (expt 0.5 5.0))
+(drbayes-refinement-search? #t)
+(drbayes-refinement-sample? #t)
+(drbayes-sample-axis-prob-min 1.0)
 
-(define n 1000)
+
+(define n 50000)
 
 (define/drbayes (vec+ lst1 lst2)
   (list (+ (list-ref lst1 0) (list-ref lst2 0))
@@ -58,13 +60,29 @@
 #;; This implementation results in awful image approximations when the denominator in the
 ;; normalization may be zero
 (define/drbayes (uniform-vec)
-  (vec-norm (list (random-std-normal) (random-std-normal) (random-std-normal))))
+  (vec-norm (list (normal 0 1) (normal 0 1) (normal 0 1))))
+
+
+(define/drbayes (triangle-inv-cdf p)
+  (strict-if (< p 0.5)
+             (- (sqrt (* 2 p)) 1)
+             (- 1 (sqrt (* 2 (- 1 p))))))
 
 ;; Unnormalized uniform direction
 (define/drbayes (uniform-vec)
-  (list (max -2 (min 2 (random-std-normal)))
-        (max -2 (min 2 (random-std-normal)))
-        (max -2 (min 2 (random-std-normal)))))
+  (list (triangle-inv-cdf (random))
+        (triangle-inv-cdf (random))
+        (triangle-inv-cdf (random)))
+  #;
+  (list (+ (triangle-inv-cdf (random)) (triangle-inv-cdf (random)))
+        (+ (triangle-inv-cdf (random)) (triangle-inv-cdf (random)))
+        (+ (triangle-inv-cdf (random)) (triangle-inv-cdf (random))))
+  #;
+  (list (normal 0 1) (normal 0 1) (normal 0 1))
+  #;
+  (list (max -2 (min 2 (normal 0 1)))
+        (max -2 (min 2 (normal 0 1)))
+        (max -2 (min 2 (normal 0 1)))))
 
 #;; Polar coordinate sampling uses fewer random variables than above, and doesn't do division
 (define/drbayes (uniform-vec)
@@ -82,9 +100,9 @@
 (struct/drbayes collision (time point normal))
 
 (define/drbayes (closer-collision c1 c2)
-  (strict-if (and (collision? c1) (collision? c2))
-      (strict-if ((collision-time c2) . < . (collision-time c1)) c2 c1)
-      (strict-if (collision? c1) c1 c2)))
+  (if (and (collision? c1) (collision? c2))
+      (if ((collision-time c2) . < . (collision-time c1)) c2 c1)
+      (if (collision? c1) c1 c2)))
 
 (define/drbayes (ray-reflect d n)
   (vec- d (vec-scale n (* 2.0 (vec-dot d n)))))
@@ -104,9 +122,9 @@
 
 (define/drbayes (ray-plane-intersect p0 v n d)
   (let ([denom  (- (vec-dot v n))])
-    (strict-if (positive? denom)
+    (if (positive? denom)
         (let ([t  (/ (+ d (vec-dot p0 n)) denom)])
-          (strict-if (positive? t)
+          (if (positive? t)
               (collision t (vec+ p0 (vec-scale v t)) n)
               #f))
         #f)))
@@ -170,7 +188,7 @@
                [d  (uniform-vec/dir n)]
                [ps  (cons p0 ps)]
                [c   (ray-plane-intersect p0 d (const plane1-n) (const plane1-d))])
-          (strict-if (collision? c)
+          (if (collision? c)
               (cons (collision-point c) ps)
               ps))
         ps)))
@@ -181,7 +199,7 @@
          [c   (closer-collision
                (ray-sphere-intersect p0 d (const sphere0-pc) (const sphere0-r))
                (ray-plane-intersect p0 d (const plane1-n) (const plane1-d)))])
-    (strict-if (collision? c)
+    (if (collision? c)
                (let ([d  (collision-data c)])
                  (if (null? d)
                      (cons (collision-point c) ps)
@@ -196,7 +214,15 @@
 (define/drbayes (e)
   (let* ([ps  (trace-light (list (start-p)) (uniform-vec))]
          [p   (list-ref ps 0)])
-    (strict-if (and (<= 0.49 (list-ref p 0)) (<= (list-ref p 0) 0.51)
+    (cond [(< (list-ref p 0) 0.49)  (fail)]
+          [(> (list-ref p 0) 0.51)  (fail)]
+          [(< (list-ref p 1) -0.001)  (fail)]
+          [(> (list-ref p 1) 0.001)  (fail)]
+          [(< (list-ref p 2) 0.49)  (fail)]
+          [(> (list-ref p 2) 0.51)  (fail)]
+          [else  ps])
+    #;
+    (if (and (<= 0.49 (list-ref p 0)) (<= (list-ref p 0) 0.51)
                     (<= -0.001 (list-ref p 1)) (<= (list-ref p 1) 0.001)
                     (<= 0.49 (list-ref p 2)) (<= (list-ref p 2) 0.51))
                ps

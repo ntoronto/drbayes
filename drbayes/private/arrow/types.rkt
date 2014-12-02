@@ -1,15 +1,15 @@
 #lang typed/racket/base
 
 (require "../untyped-utils.rkt"
-         "../set.rkt")
+         "../set.rkt"
+         "../flonum.rkt")
 
 (provide (all-defined-out))
 
 ;; ===================================================================================================
 ;; Indexes
 
-(define-type Interval-Splitter (-> Nonempty-Real-Interval (Values (Listof Nonempty-Real-Interval)
-                                                                  (Listof Positive-Flonum))))
+(define-type Interval-Splitter (-> Nonempty-Prob-Interval (Listof Nonempty-Prob-Interval)))
 
 (struct: random-index ([index : Store-Index]
                        [split : (U #f Interval-Splitter)])

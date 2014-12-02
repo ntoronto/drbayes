@@ -8,13 +8,9 @@
          "arrow/pure-lifts.rkt"
          "arrow/prob-arrows.rkt"
          "arrow/prob-lifts.rkt"
-         "arrow/proc-arrow.rkt")
-
-(struct: meaning ([proc : Proc-Arrow]
-                  [bot* : Bot*-Arrow]
-                  [pre* : Pre*-Arrow]
-                  [idx : Idx-Arrow])
-  #:transparent)
+         "arrow/proc-arrow.rkt"
+         "arrow/refine.rkt"
+         "arrow/meaning.rkt")
 
 (provide (all-from-out
           "arrow/indexes.rkt"
@@ -25,5 +21,6 @@
           "arrow/pure-lifts.rkt"
           "arrow/prob-arrows.rkt"
           "arrow/prob-lifts.rkt"
-          "arrow/proc-arrow.rkt")
-         (all-defined-out))
+          "arrow/proc-arrow.rkt"
+          "arrow/refine.rkt"
+          "arrow/meaning.rkt"))

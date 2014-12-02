@@ -2,16 +2,25 @@
 
 (require math/distributions
          drbayes/private/set
-         "random-real-set.rkt")
+         "random-prob-set.rkt")
 
-(provide random-nonempty-store-set random-store-set)
-
-(define unit-endpoint-dist (discrete-dist '(0.0 0.1 0.2 0.3 0.5 0.7 0.8 0.9 1.0)))
+(provide random-nonempty-store-set random-store-set random-store)
 
 (define js
   (list j0
         (left j0) (right j0)
         (left (left j0)) (left (right j0)) (right (left j0)) (right (right j0))))
+
+(: random-store (-> Store-Set Store))
+(define (random-store S)
+  (cond [(empty-store-set? S)  (raise-argument-error 'random-store "Nonempty-Store-Set" S)]
+        [else
+         (let loop ([S S] [j j0])
+           (define-values (X B L R) (store-set-projs S))
+           (Store (delay (random-prob X))
+                  (delay (if (bools? B) (make-bottom-trace-value j) (trues? B)))
+                  (delay (loop L (left j)))
+                  (delay (loop R (right j)))))]))
 
 (: random-nonempty-store-set (-> Nonempty-Store-Set))
 (define (random-nonempty-store-set)
@@ -24,7 +33,7 @@
                (if (empty-store-set? S) (reject) S)))]
           [(< r #i2/3)
            (let reject ()
-             (define I (random-real-set unit-endpoint-dist))
+             (define I (random-prob-set))
              (if (or (empty-real-set? I) (reals? I))
                  (reject)
                  (let ([S  (store-set-random-unproj S j I)])

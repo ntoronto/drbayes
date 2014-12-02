@@ -4,6 +4,7 @@
          racket/list
          "types.rkt"
          "real-set.rkt"
+         "prob-set.rkt"
          "null-set.rkt"
          "bool-set.rkt"
          "store.rkt"
@@ -12,6 +13,7 @@
          "extremal-set.rkt"
          "union.rkt"
          "value.rkt"
+         "../flonum.rkt"
          "../untyped-utils.rkt")
 
 (provide (all-defined-out))
@@ -147,6 +149,7 @@
 (: basic-member? (Basic Value -> (U Different Boolean)))
 (define (basic-member? A x)
   (cond [(and (real-set? A) (flonum? x))   (real-set-member? A x)]
+        [(and (prob-set? A) (prob? x))     (prob-set-member? A x)]
         [(and (bool-set? A) (boolean? x))  (bool-set-member? A x)]
         [(and (null-set? A) (null? x))     (null-set-member? A x)]
         [(and (pair-set? A) (pair? x))     (pair-set-member? A x)]
@@ -158,6 +161,7 @@
                            (Basic Basic -> (U Different Basic))))
 (define (basic-intersect A B)
   (cond [(and (real-set? A) (real-set? B))  (real-set-intersect A B)]
+        [(and (prob-set? A) (prob-set? B))  (prob-set-intersect A B)]
         [(and (null-set? A) (null-set? B))  (null-set-intersect A B)]
         [(and (pair-set? A) (pair-set? B))  (pair-set-intersect A B)]
         [(and (bool-set? A) (bool-set? B))  (bool-set-intersect A B)]
@@ -169,6 +173,7 @@
                       (Basic Basic -> (U Different Basic))))
 (define (basic-join A B)
   (cond [(and (real-set? A) (real-set? B))  (real-set-join A B)]
+        [(and (prob-set? A) (prob-set? B))  (prob-set-join A B)]
         [(and (bool-set? A) (bool-set? B))  (bool-set-union A B)]
         [(and (null-set? A) (null-set? B))  (null-set-union A B)]
         [(and (pair-set? A) (pair-set? B))  (pair-set-join A B)]
@@ -178,6 +183,7 @@
 (: basic-subseteq? (Basic Basic -> (U Different Boolean)))
 (define (basic-subseteq? A B)
   (cond [(and (real-set? A) (real-set? B))  (real-set-subseteq? A B)]
+        [(and (prob-set? A) (prob-set? B))  (prob-set-subseteq? A B)]
         [(and (bool-set? A) (bool-set? B))  (bool-set-subseteq? A B)]
         [(and (null-set? A) (null-set? B))  (null-set-subseteq? A B)]
         [(and (pair-set? A) (pair-set? B))  (pair-set-subseteq? A B)]
@@ -187,6 +193,7 @@
 (: basic-singleton? (Basic -> Boolean))
 (define (basic-singleton? A)
   (cond [(real-set? A)  (real-set-singleton? A)]
+        [(prob-set? A)  (prob-set-singleton? A)]
         [(bool-set? A)  (bool-set-singleton? A)]
         [(null-set? A)  (null-set-singleton? A)]
         [(pair-set? A)  (pair-set-singleton? A)]

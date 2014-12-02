@@ -22,3 +22,4 @@
 (struct: Base-Bot-Basic Base-Bot-Entry () #:transparent)
 (define bot-basic? Base-Bot-Basic?)
 
+(define-type Tag Symbol)

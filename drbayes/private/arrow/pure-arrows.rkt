@@ -3,6 +3,7 @@
 (require racket/promise
          racket/match
          "../set.rkt"
+         "../flonum.rkt"
          "parameters.rkt"
          "types.rkt"
          "preimage-mapping.rkt"
@@ -231,23 +232,28 @@
 ;; ===================================================================================================
 ;; Store projection and splitting
 
-(: store-random/bot (-> Bot-Arrow))
+(: store-uniform/bot (-> (-> Value (U Bottom Prob))))
 (: store-branch/bot (-> Bot-Arrow))
 (: store-left/bot   (-> Bot-Arrow))
 (: store-right/bot  (-> Bot-Arrow))
 
-(: store-random/pre (-> Pre-Arrow))
+(: store-uniform/pre (-> Pre-Arrow))
 (: store-branch/pre (-> Pre-Arrow))
 (: store-left/pre   (-> Pre-Arrow))
 (: store-right/pre  (-> Pre-Arrow))
 
-(define ((store-random/bot) a)
-  (cond [(store? a)  (store-random a)]
-        [else  (bottom (delay (format "store-random/bot: expected Store; given ~e" a)))]))
+(define ((store-uniform/bot) a)
+  (cond [(store? a)
+         (define x (store-random a))
+         (cond [(prob? x)  x]
+               [else  (bottom (delay (format "store-uniform/bot: zero-probability axis")))])]
+        [else  (bottom (delay (format "store-uniform/bot: expected Store; given ~e" a)))]))
+
+(void (ann store-uniform/bot (-> Bot-Arrow)))
 
 (define ((store-branch/bot) a)
   (cond [(store? a)  (store-branch a)]
-        [else  (bottom (delay (format "store-random/bot: expected Store; given ~e" a)))]))
+        [else  (bottom (delay (format "store-uniform/bot: expected Store; given ~e" a)))]))
 
 (define ((store-left/bot) a)
   (cond [(store? a)  (store-left a)]
@@ -257,7 +263,7 @@
   (cond [(store? a)  (store-right a)]
         [else  (bottom (delay (format "store-right/bot: expected Store; given ~e" a)))]))
 
-(define (store-random/pre)
+(define (store-uniform/pre)
   (define fun (make-pre-mapping-fun/memo))
   (make-pre-arrow/memo
    (λ (S)
@@ -265,7 +271,7 @@
        (if (empty-store-set? S)
            empty-pre-mapping
            (nonempty-pre-mapping (store-set-random S)
-                                 (fun (λ (X) (let ([S  (store-set-unrandom S (set-take-reals X))])
+                                 (fun (λ (X) (let ([S  (store-set-unrandom S (set-take-probs X))])
                                                (if (empty-store-set? S) empty-set S))))))))))
 
 (define (store-branch/pre)
@@ -304,13 +310,28 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; Random boolean store projection
 
-(: boolean-preimage (-> Flonum (Values Plain-Real-Interval
-                                       Plain-Real-Interval)))
-(define (boolean-preimage p)
-  (values (Plain-Real-Interval 0.0 p #t #f)
-          (Plain-Real-Interval p 1.0 #t #t)))
+(: store-boolean/bot (-> Flonum Bot-Arrow))
+(define (store-boolean/bot p)
+  (cond [(and (p . > . 0.0) (p . < . 1.0))
+         (define uniform/bot (store-uniform/bot))
+         (let ([p  (assert (flonum->prob p) prob?)])
+           (λ (a)
+             (define x (uniform/bot a))
+             (if (bottom? x) x (prob< x p))))]
+        [else
+         (const/bot (p . >= . 1.0))]))
 
-(: store-boolean/pre (Flonum -> Pre-Arrow))
+(: boolean-preimage (-> Nonnegative-Flonum (Values Plain-Prob-Interval
+                                                   Plain-Prob-Interval)))
+(define (boolean-preimage orig-p)
+  (define p (flonum->prob orig-p))
+  (cond [(prob? p)
+         (values (Plain-Prob-Interval prob-0 p #t #f)
+                 (Plain-Prob-Interval p prob-1 #t #t))]
+        [else
+         (raise-argument-error 'boolean-preimage "Flonum in (0,1)" orig-p)]))
+
+(: store-boolean/pre (-> Flonum Pre-Arrow))
 (define (store-boolean/pre p)
   (cond [(and (p . > . 0.0) (p . < . 1.0))
          (define fun (make-pre-mapping-fun/memo))
@@ -321,8 +342,8 @@
               (if (empty-store-set? S)
                   empty-pre-mapping
                   (let* ([X  (store-set-random S)]
-                         [Xt  (real-set-intersect Xt X)]
-                         [Xf  (real-set-intersect Xf X)])
+                         [Xt  (prob-set-intersect Xt X)]
+                         [Xf  (prob-set-intersect Xf X)])
                     (cond [(and (empty-real-set? Xt) (empty-real-set? Xf))
                            empty-pre-mapping]
                           [(empty-real-set? Xf)
@@ -337,7 +358,7 @@
                            (nonempty-pre-mapping
                             bools  (fun (λ (B) (let* ([X  (cond [(eq? B trues)   Xt]
                                                                 [(eq? B falses)  Xf]
-                                                                [else  (real-set-join Xt Xf)])]
+                                                                [else  (prob-set-join Xt Xf)])]
                                                       [S  (store-set-unrandom S X)])
                                                  (if (empty-store-set? S) empty-set S)))))]))))))]
         [else

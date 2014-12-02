@@ -122,16 +122,6 @@
 
 (define bij-mono-cos (bijection-inverse bij-acos))
 
-(define bij-normal
-  (bijection #t unit-interval reals
-             flnormal/rndd flnormal/rndu
-             flnormal-inv/rndd flnormal-inv/rndu))
-
-(define bij-cauchy
-  (bijection #t unit-interval reals
-             flcauchy/rndd flcauchy/rndu
-             flcauchy-inv/rndd flcauchy-inv/rndu))
-
 (: bij-scale (-> Flonum bijection))
 (define (bij-scale y)
   (when (zero? y) (raise-argument-error 'bij-scale "nonzero Flonum" y))

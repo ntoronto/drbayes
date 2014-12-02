@@ -3,6 +3,7 @@
 (require racket/match
          racket/promise
          "../set.rkt"
+         "../flonum.rkt"
          "types.rkt"
          "indexes.rkt"
          "pure-arrows.rkt")
@@ -177,35 +178,31 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; Branch trace projections
 
-(: branch/bot* (-> Bot*-Arrow))
-(define (branch/bot*)
+(: store-branch/bot* (-> Bot*-Arrow))
+(define (store-branch/bot*)
   (bot*-arrow
    (λ: ([a : Value])
      (match a
        [(cons (? store? s) _)  (store-branch s)]
        [_  (proj-domain-fail 'if a)]))))
 
-(: branch/pre* (-> Pre*-Arrow))
-(define (branch/pre*)
+(: store-branch/pre* (-> Pre*-Arrow))
+(define (store-branch/pre*)
   (pre*-arrow (>>>/pre (fst/pre) (store-branch/pre))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Random source projections
 
-(: random/bot* (-> Bot*-Arrow))
-(define (random/bot*)
-  (bot*-arrow
-   (λ: ([a : Value])
-     (match a
-       [(cons (? store? s) _)  (store-random s)]
-       [_  (proj-domain-fail 'random a)]))))
+(: store-uniform/bot* (-> Bot*-Arrow))
+(define (store-uniform/bot*)
+  (bot*-arrow (>>>/bot (fst/bot) (store-uniform/bot))))
 
-(: random/pre* (-> Pre*-Arrow))
-(define (random/pre*)
-  (pre*-arrow (>>>/pre (fst/pre) (store-random/pre))))
+(: store-uniform/pre* (-> Pre*-Arrow))
+(define (store-uniform/pre*)
+  (pre*-arrow (>>>/pre (fst/pre) (store-uniform/pre))))
 
-(: random/idx (-> Idx-Arrow))
-(define ((random/idx) j)
+(: store-uniform/idx (-> Idx-Arrow))
+(define ((store-uniform/idx) j)
   (list (random-index j #f)))
 
 ;; ---------------------------------------------------------------------------------------------------
@@ -213,11 +210,7 @@
 
 (: boolean/bot* (Flonum -> Bot*-Arrow))
 (define (boolean/bot* p)
-  (bot*-arrow
-   (λ: ([a : Value])
-     (match a
-       [(cons (? store? s) _)  (< (store-random s) p)]
-       [_  (proj-domain-fail 'boolean a)]))))
+  (bot*-arrow (>>>/bot (fst/bot) (store-boolean/bot p))))
 
 (: boolean/pre* (Flonum -> Pre*-Arrow))
 (define (boolean/pre* p)
@@ -237,7 +230,7 @@
 (: ifte*/bot* (Bot*-Arrow Bot*-Arrow Bot*-Arrow -> Bot*-Arrow))
 (define (ifte*/bot* k1 k2 k3)
   (bot*-arrow
-   (ifte*/bot (run/bot* (branch/bot*))
+   (ifte*/bot (run/bot* (store-branch/bot*))
               (>>>/bot (first/bot (store-left/bot)) (run/bot* k1))
               (>>>/bot (first/bot (>>>/bot (store-right/bot) (store-left/bot))) (run/bot* k2))
               (>>>/bot (first/bot (>>>/bot (store-right/bot) (store-right/bot))) (run/bot* k3)))))
@@ -245,7 +238,7 @@
 (: ifte*/pre* (Pre*-Arrow Pre*-Arrow Pre*-Arrow -> Pre*-Arrow))
 (define (ifte*/pre* k1 k2 k3)
   (pre*-arrow
-   (ifte*/pre (run/pre* (branch/pre*))
+   (ifte*/pre (run/pre* (store-branch/pre*))
               (>>>/pre (first/pre (store-left/pre)) (run/pre* k1))
               (>>>/pre (first/pre (>>>/pre (store-right/pre) (store-left/pre))) (run/pre* k2))
               (>>>/pre (first/pre (>>>/pre (store-right/pre) (store-right/pre))) (run/pre* k3)))))

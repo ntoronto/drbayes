@@ -3,7 +3,8 @@
 (require racket/list
          (only-in typed/rackunit check-true)
          plot/typed
-         "../main.rkt")
+         drbayes/private/set
+         drbayes/private/flonum)
 
 (provide (all-defined-out)
          profile-thunk
@@ -27,13 +28,13 @@
 ;; ===================================================================================================
 ;; Plotting utils
 
-(: real-set->ivls (Nonempty-Real-Set -> (Listof ivl)))
-(define (real-set->ivls I)
-  (cond [(or (reals? I) (Plain-Real-Interval? I))
-         (define-values (a b a? b?) (real-interval-fields I))
-         (list (ivl a b))]
+(: prob-set->ivls (Nonempty-Prob-Set -> (Listof ivl)))
+(define (prob-set->ivls I)
+  (cond [(or (probs? I) (Plain-Prob-Interval? I))
+         (define-values (a b a? b?) (prob-interval-fields I))
+         (list (ivl (prob->flonum a) (prob->flonum b)))]
         [else
-         (append* (map real-set->ivls (Plain-Real-Interval-List-elements I)))]))
+         (append* (map prob-set->ivls (Plain-Prob-Interval-List-elements I)))]))
 
 (: maybe-pad-list (All (A) ((Listof A) Integer (-> A) -> (Listof A))))
 (define (maybe-pad-list lst n thnk)
@@ -59,15 +60,20 @@
   (map (λ: ([lst : (Listof ivl)])
          (maybe-pad-list lst 3 (λ () (ivl 0 1))))
        (list-product (map (λ: ([lst : (Listof ivl)]) (take lst (min (length lst) 3)))
-                          (map real-set->ivls (store-set-random-list S))))))
+                          (map prob-set->ivls (store-set-random-list S))))))
 
 (: store->point (Store -> (Listof Flonum)))
 (define (store->point s)
-  (maybe-pad-list (store-random-list s) 3 random))
+  (maybe-pad-list (map (λ ([p : (U Prob Bad-Prob)])
+                         (if (prob? p) (prob->flonum p) +nan.0))
+                       (store-random-list s))
+                  3
+                  (λ () (flprob-random -inf.0 +inf.0))))
 
 (: value->listof-flonum (Maybe-Value -> (Listof Flonum)))
 (define (value->listof-flonum v)
   (cond [(flonum? v)  (list v)]
+        [(prob? v)  (list (prob->flonum v))]
         [(boolean? v)  (list (if v 1.0 0.0))]
         [(pair? v)  (append (value->listof-flonum (car v))
                             (value->listof-flonum (cdr v)))]

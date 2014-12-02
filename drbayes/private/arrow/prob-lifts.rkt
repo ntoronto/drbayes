@@ -144,13 +144,17 @@
 (define (truncate/pre*) (η/pre* (truncate/pre)))
 (define (truncate/idx) any/idx)
 
-(define (cauchy/bot*) (η/bot* (cauchy/bot)))
-(define (cauchy/pre*) (η/pre* (cauchy/pre)))
-(define (cauchy/idx) any/idx)
+(define (normal-inv-cdf/bot*) (η/bot* (normal-inv-cdf/bot)))
+(define (normal-inv-cdf/pre*) (η/pre* (normal-inv-cdf/pre)))
+(define (normal-inv-cdf/idx) any/idx)
 
-(define (normal/bot*) (η/bot* (normal/bot)))
-(define (normal/pre*) (η/pre* (normal/pre)))
-(define (normal/idx) any/idx)
+(define (cauchy-inv-cdf/bot*) (η/bot* (cauchy-inv-cdf/bot)))
+(define (cauchy-inv-cdf/pre*) (η/pre* (cauchy-inv-cdf/pre)))
+(define (cauchy-inv-cdf/idx) any/idx)
+
+(define (uniform-inv-cdf/bot*) (η/bot* (uniform-inv-cdf/bot)))
+(define (uniform-inv-cdf/pre*) (η/pre* (uniform-inv-cdf/pre)))
+(define (uniform-inv-cdf/idx) any/idx)
 
 (define (abs/bot*) (η/bot* (abs/bot)))
 (define (abs/pre*) (η/pre* (abs/pre)))

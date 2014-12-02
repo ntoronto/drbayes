@@ -35,8 +35,6 @@
 (define-values (acos/bot acos/pre) (strict-monotone/prim 'acos flacos bij-acos))
 (define-values (mono-sin/bot mono-sin/pre) (strict-monotone/prim 'mono-sin flsin bij-mono-sin))
 (define-values (mono-cos/bot mono-cos/pre) (strict-monotone/prim 'mono-cos flcos bij-mono-cos))
-(define-values (cauchy/bot cauchy/pre) (strict-monotone/prim 'cauchy flcauchy bij-cauchy))
-(define-values (normal/bot normal/pre) (strict-monotone/prim 'normal flnormal bij-normal))
 
 (define pos-recip/pre (strict-monotone/pre bij-pos-recip))
 (define neg-recip/pre (strict-monotone/pre bij-neg-recip))

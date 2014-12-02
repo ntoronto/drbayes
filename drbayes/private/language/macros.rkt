@@ -4,9 +4,7 @@
                      racket/list
                      racket/math
                      syntax/parse
-                     syntax/strip-context
-                     racket/syntax
-                     racket/string)
+                     racket/syntax)
          racket/list
          racket/math
          racket/promise
@@ -24,7 +22,7 @@
          "../arrow.rkt")
 
 (provide define/drbayes struct/drbayes drbayes drbayes-run
-         fail random random-std-normal random-std-cauchy
+         fail random store-uniform
          quote null empty
          and or not
          car cdr real? null? pair? boolean?
@@ -33,6 +31,7 @@
          zero? negative? positive? nonnegative? nonpositive?
          partial-cos partial-sin
          cons + * - / < <= > >= =
+         normal-inv-cdf cauchy-inv-cdf uniform-inv-cdf
          list uniform normal cauchy
          const
          lazy
@@ -44,8 +43,8 @@
 (module typed-defs typed/racket/base
   (provide (all-defined-out))
   
-  (require "../arrow.rkt"
-           "../set.rkt")
+  (require "../set.rkt"
+           "../arrow.rkt")
   
   (: drbayes-run (meaning -> Value))
   (define (drbayes-run e)
@@ -84,19 +83,21 @@
     (pattern (not e:expr) #:attr expression #'(strict-if e #f #t))
     (pattern (list) #:attr expression #'null)
     (pattern (list e0:expr es:expr ...) #:attr expression #'(cons e0 (list es ...)))
-    (pattern (uniform a:expr b:expr) #:attr expression #'(let ([d  (- b a)]) (+ a (* d (random)))))
-    (pattern (normal μ:expr σ:expr) #:attr expression #'(+ μ (* σ (random-std-normal))))
-    (pattern (cauchy m:expr s:expr) #:attr expression #'(+ m (* s (random-std-cauchy))))
+    (pattern (normal μ:expr σ:expr)
+             #:attr expression #'(+ μ (* σ (normal-inv-cdf (store-uniform)))))
+    (pattern (cauchy m:expr s:expr)
+             #:attr expression #'(+ m (* s (cauchy-inv-cdf (store-uniform)))))
+    (pattern (uniform a:expr b:expr)
+             #:attr expression #'(let ([c a]) (+ c (* (- b c) (random)))))
     )
   
   (define-syntax-class 0ary-primitive
     #:description "zero-ary primitive operator"
     #:attributes (computation)
-    #:literals (fail random random-std-normal random-std-cauchy)
+    #:literals (fail store-uniform random)
     (pattern fail #:attr computation #'(fail/arr))
-    (pattern random #:attr computation #'(random/arr))
-    (pattern random-std-normal #:attr computation #'((random/arr) . >>>/arr . (normal/arr)))
-    (pattern random-std-cauchy #:attr computation #'((random/arr) . >>>/arr . (cauchy/arr)))
+    (pattern random #:attr computation #'((store-uniform/arr) . >>>/arr . (uniform-inv-cdf/arr)))
+    (pattern store-uniform #:attr computation #'(store-uniform/arr))
     )
   
   (define-syntax-class 1ary-primitive
@@ -106,7 +107,8 @@
                   car cdr real? null? pair? boolean?
                   exp log expm1 log1p abs sqr sqrt acos asin floor ceiling round truncate
                   zero? negative? positive? nonnegative? nonpositive?
-                  partial-cos partial-sin)
+                  partial-cos partial-sin
+                  normal-inv-cdf cauchy-inv-cdf uniform-inv-cdf)
     (pattern + #:attr computation #'(restrict/arr reals))
     (pattern - #:attr computation #'(neg/arr))
     (pattern * #:attr computation #'(restrict/arr reals))
@@ -137,6 +139,9 @@
     (pattern nonpositive? #:attr computation #'(nonpositive?/arr))
     (pattern partial-cos #:attr computation #'(partial-cos/arr))
     (pattern partial-sin #:attr computation #'(partial-sin/arr))
+    (pattern uniform-inv-cdf #:attr computation #'(uniform-inv-cdf/arr))
+    (pattern normal-inv-cdf #:attr computation #'(normal-inv-cdf/arr))
+    (pattern cauchy-inv-cdf #:attr computation #'(cauchy-inv-cdf/arr))
     )
   
   (define-syntax-class 2ary-primitive

@@ -13,9 +13,18 @@
          "extremal-set.rkt"
          "store.rkt"
          "store-set.rkt"
-         "union.rkt")
+         "union.rkt"
+         "../flonum.rkt"
+         )
 
-(define-type Value (Rec Value (U Flonum Boolean Null (Pair Value Value) tagged-value Store)))
+(define-type Value (Rec Value (U Flonum
+                                 Prob
+                                 Boolean
+                                 Null
+                                 (Pair Value Value)
+                                 tagged-value
+                                 Store)))
+
 (define-type Maybe-Value (U Value Bottom))
 
 (struct: tagged-value Base-Value ([tag : Symbol] [value : Value]) #:transparent)
@@ -23,6 +32,7 @@
 (: value? (Value -> Boolean))
 (define (value? v)
   (cond [(flonum? v)        (< -inf.0 v +inf.0)]
+        [(prob? v)          #t]
         [(boolean? v)       #t]
         [(null? v)          #t]
         [(pair? v)          (and (value? (car v)) (value? (cdr v)))]
@@ -35,6 +45,7 @@
 (: value-tag (Value -> Tag))
 (define (value-tag v)
   (cond [(flonum? v)        real-tag]
+        [(prob? v)          prob-tag]
         [(boolean? v)       bool-tag]
         [(null? v)          null-tag]
         [(pair? v)          pair-tag]

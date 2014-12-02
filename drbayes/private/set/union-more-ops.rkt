@@ -4,6 +4,7 @@
          racket/match
          "types.rkt"
          "real-set.rkt"
+         "prob-set.rkt"
          "null-set.rkt"
          "bool-set.rkt"
          "store-set.rkt"
@@ -84,6 +85,9 @@
 (: set-take-reals (Set -> Real-Set))
 (define set-take-reals (make-set-take-basic real-set? real-tag empty-real-set reals))
 
+(: set-take-probs (Set -> Prob-Set))
+(define set-take-probs (make-set-take-basic prob-set? prob-tag empty-prob-set probs))
+
 (: set-take-bools (Set -> Bool-Set))
 (define set-take-bools (make-set-take-basic bool-set? bool-tag empty-bool-set bools))
 
@@ -163,6 +167,15 @@
         [else
          (for/fold ([B : Set  empty-set]) ([I  (in-list (Plain-Real-Interval-List-elements I))])
            (set-join B (f I)))]))
+
+(: prob-set-map* (-> (-> Nonempty-Prob-Interval Set) Prob-Set Set))
+(define (prob-set-map* f I)
+  (cond [(empty-prob-set? I)  empty-set]
+        [(or (probs? I) (Plain-Prob-Interval? I))  (f I)]
+        [else
+         (for/fold ([B : Set  empty-set]) ([I  (in-list (Plain-Prob-Interval-List-elements I))])
+           (set-join B (f I)))]))
+
 #|
 (: integer-set-map* (-> (-> Nonempty-Integer-Interval Set) Integer-Set Set))
 (define (integer-set-map* f I)

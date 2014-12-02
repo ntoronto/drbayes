@@ -41,6 +41,7 @@
                    [Nonfull-Name-Interval   (format-id #'Name "Nonfull-~a-Interval" #'Name)]
                    [Name-Interval  (format-id #'Name "~a-Interval" #'Name)]
                    [name-interval  (format-id #'name "~a-interval" #'name)]
+                   [name-interval-join       (format-id #'name "~a-interval-join" #'name)]
                    [name-interval-intersect  (format-id #'name "~a-interval-intersect" #'name)]
                    [name-interval-subseteq?  (format-id #'name "~a-interval-subseteq?" #'name)]
                    [name-interval-member?  (format-id #'name "~a-interval-member?" #'name)]
@@ -93,6 +94,37 @@
                    [else  (let-values ([(a b a? b?)  (guard a b a? b?)])
                             (Plain-Name-Interval a b a? b?))]))
            
+           (: name-interval-join
+              (case-> (-> Name-Interval Nonempty-Name-Interval Nonempty-Name-Interval)
+                      (-> Nonempty-Name-Interval Name-Interval Nonempty-Name-Interval)
+                      (-> Name-Interval Name-Interval Name-Interval)))
+           (define (name-interval-join I1 I2)
+             (cond [(empty-name-set? I1)  I2]
+                   [(empty-name-set? I2)  I1]
+                   [(eq? I1 I2)  I1]
+                   [(full-name-set? I1)  I1]
+                   [(full-name-set? I2)  I2]
+                   [else
+                    (match-define (Plain-Name-Interval a1 b1 a1? b1?) I1)
+                    (match-define (Plain-Name-Interval a2 b2 a2? b2?) I2)
+                    (define-values (a a?)
+                      (cond [(< a1 a2)  (values a1 a1?)]
+                            [(< a2 a1)  (values a2 a2?)]
+                            [else       (values a1 (or a1? a2?))]))
+                    (define-values (b b?)
+                      (cond [(< b1 b2)  (values b2 b2?)]
+                            [(< b2 b1)  (values b1 b1?)]
+                            [else       (values b1 (or b1? b2?))]))
+                    (cond [(and (eq? a a1) (eq? b b1) (eq? a? a1?) (eq? b? b1?))  I1]
+                          [(and (eq? a a2) (eq? b b2) (eq? a? a2?) (eq? b? b2?))  I2]
+                          [else
+                           (define I (name-interval a b a? b?))
+                           (cond [(empty-name-set? I)
+                                  (raise-result-error 'name-interval-join
+                                                      (format "~a" 'Nonempty-Name-Interval)
+                                                      I)]
+                                 [else  I])])]))
+           
            (: name-interval-intersect
               (case-> (-> Name-Interval Nonfull-Name-Interval Nonfull-Name-Interval)
                       (-> Nonfull-Name-Interval Name-Interval Nonfull-Name-Interval)
@@ -119,7 +151,7 @@
                           [else
                            (define I (name-interval a b a? b?))
                            (cond [(full-name-set? I)
-                                  (raise-result-error 'interval-intersect
+                                  (raise-result-error 'name-interval-intersect
                                                       (format "~a" 'Nonfull-Name-Interval)
                                                       I)]
                                  [else  I])])]))

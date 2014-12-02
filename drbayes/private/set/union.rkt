@@ -7,6 +7,7 @@
          math/private/utils
          "types.rkt"
          "real-set.rkt"
+         "prob-set.rkt"
          "bool-set.rkt"
          "null-set.rkt"
          "extremal-set.rkt"
@@ -19,10 +20,9 @@
 ;; ===================================================================================================
 ;; Tags
 
-(define-type Tag Symbol)
-
 ;; Basic set tags
 (define real-tag 'real)
+(define prob-tag 'prob)
 (define bool-tag 'bool)
 (define null-tag 'null)
 (define pair-tag 'pair)
@@ -65,6 +65,7 @@
 
 (define-type Full-Basic
   (U Full-Real-Set
+     Full-Prob-Set
      Full-Bool-Set
      Full-Null-Set
      Full-Pair-Set
@@ -72,6 +73,7 @@
 
 (define-type Empty-Basic
   (U Empty-Real-Set
+     Empty-Prob-Set
      Empty-Bool-Set
      Empty-Null-Set
      Empty-Pair-Set
@@ -79,6 +81,7 @@
 
 (define-type Plain-Basic
   (U Plain-Real-Set
+     Plain-Prob-Set
      Plain-Bool-Set
      ;Plain-Null-Set  ; there aren't any plain null sets
      Plain-Pair-Set
@@ -91,6 +94,7 @@
 (: empty-basic? (Any -> Boolean : Empty-Basic))
 (define (empty-basic? A)
   (or (empty-real-set? A)
+      (empty-prob-set? A)
       (empty-bool-set? A)
       (empty-null-set? A)
       (empty-pair-set? A)
@@ -99,6 +103,7 @@
 (: full-basic? (Any -> Boolean : Full-Basic))
 (define (full-basic? A)
   (or (reals? A)
+      (probs? A)
       (bools? A)
       (nulls? A)
       (pairs? A)
@@ -117,23 +122,12 @@
 (define-syntax top-basic-set (make-rename-transformer #'Top-Basic-set))
 (define-syntax top-basic? (make-rename-transformer #'Top-Basic?))
 
-(: print-top-basic (Top-Basic Output-Port (U #t #f 0 1) -> Any))
-(define (print-top-basic A port mode)
-  (let ([A  (top-basic-set A)])
-    (cond [(empty-real-set? A)  (write-string "not-reals" port)]
-          [(empty-bool-set? A)  (write-string "not-bools" port)]
-          [(empty-null-set? A)  (write-string "not-nulls" port)]
-          [(empty-pair-set? A)  (write-string "not-pairs" port)]
-          [else  (pretty-print-constructor 'top-basic (list A) port mode)])))
-
-(struct: Top-Basic Base-Top-Entry ([set : Nonfull-Basic])
-  #:transparent
-  #:property prop:custom-print-quotable 'never
-  #:property prop:custom-write print-top-basic)
+(struct: Top-Basic Base-Top-Entry ([set : Nonfull-Basic]) #:transparent)
 
 (: basic-tag (Basic -> Tag))
 (define (basic-tag A)
   (cond [(real-set? A)  real-tag]
+        [(prob-set? A)  prob-tag]
         [(bool-set? A)  bool-tag]
         [(null-set? A)  null-tag]
         [(pair-set? A)  pair-tag]
@@ -153,6 +147,7 @@
   (if (full-basic? A) universe (Top-Basic A)))
 
 (define not-reals (Top-Basic empty-real-set))
+(define not-probs (Top-Basic empty-prob-set))
 (define not-bools (Top-Basic empty-bool-set))
 (define not-nulls (Top-Basic empty-null-set))
 (define not-pairs (Top-Basic empty-pair-set))
@@ -169,25 +164,8 @@
 (define-syntax top-tagged-set (make-rename-transformer #'Top-Tagged-set))
 (define-syntax top-tagged? (make-rename-transformer #'Top-Tagged?))
 
-(: print-bot-tagged (Bot-Tagged Output-Port (U #t #f 0 1) -> Any))
-(define (print-bot-tagged A port mode)
-  (match-define (Bot-Tagged tag val) A)
-  (pretty-print-constructor 'bot-tagged (list tag val) port mode))
-
-(: print-top-tagged (Top-Tagged Output-Port (U #t #f 0 1) -> Any))
-(define (print-top-tagged A port mode)
-  (match-define (Top-Tagged tag val) A)
-  (pretty-print-constructor 'top-tagged (list tag val) port mode))
-
-(struct: Bot-Tagged Base-Bot-Entry ([tag : Tag] [set : Nonempty-Set])
-  #:transparent
-  #:property prop:custom-print-quotable 'never
-  #:property prop:custom-write print-bot-tagged)
-
-(struct: Top-Tagged Base-Top-Entry ([tag : Tag] [set : Nonfull-Set])
-  #:transparent
-  #:property prop:custom-print-quotable 'never
-  #:property prop:custom-write print-top-tagged)
+(struct: Bot-Tagged Base-Bot-Entry ([tag : Tag] [set : Nonempty-Set]) #:transparent)
+(struct: Top-Tagged Base-Top-Entry ([tag : Tag] [set : Nonfull-Set]) #:transparent)
 
 (: bot-tagged (case-> (Tag Nonempty-Set -> Bot-Tagged)
                       (Tag Set -> (U Bot-Tagged Empty-Set))))
@@ -216,25 +194,8 @@
 (define-type Bot-Union-Hash (HashTable Tag Bot-Entry))
 (define-type Top-Union-Hash (HashTable Tag Top-Entry))
 
-(: print-bot-union (Bot-Union Output-Port (U #t #f 0 1) -> Any))
-(define (print-bot-union A port mode)
-  (pretty-print-constructor 'bot-union (hash-values (Bot-Union-hash A)) port mode))
-
-(: print-top-union (Top-Union Output-Port (U #t #f 0 1) -> Any))
-(define (print-top-union A port mode)
-  (pretty-print-constructor 'top-union (hash-values (Top-Union-hash A)) port mode))
-
-(struct: Bot-Union Base-Bot-Set ([hash : Bot-Union-Hash])
-  #:transparent
-  #:property prop:custom-print-quotable 'never
-  #:property prop:custom-write print-bot-union
-  )
-
-(struct: Top-Union Base-Top-Set ([hash : Top-Union-Hash])
-  #:transparent
-  #:property prop:custom-print-quotable 'never
-  #:property prop:custom-write print-top-union
-  )
+(struct: Bot-Union Base-Bot-Set ([hash : Bot-Union-Hash]) #:transparent)
+(struct: Top-Union Base-Top-Set ([hash : Top-Union-Hash]) #:transparent)
 
 (define-syntax bot-union? (make-rename-transformer #'Bot-Union?))
 (define-syntax top-union? (make-rename-transformer #'Top-Union?))

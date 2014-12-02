@@ -111,12 +111,7 @@
   (define-unary-flops/fake-rnd flasin flasin 1 1 (* 0.5 -pi/rndd) (* 0.5 +pi/rndu))
   (define-unary-flops/fake-rnd flacos flacos 1 1       0.0               +pi/rndu)
   (define-unary-flops/fake-rnd flatan flatan 1 1 (* 0.5 -pi/rndd) (* 0.5 +pi/rndu))
-  
-  (define-unary-flops/fake-rnd flnormal flnormal 4 4 -inf.0 +inf.0)
-  (define-unary-flops/fake-rnd flcauchy flcauchy 2 2 -inf.0 +inf.0)
-  (define-unary-flops/fake-rnd flnormal-inv flnormal-inv 4 4 0.0 1.0)
-  (define-unary-flops/fake-rnd flcauchy-inv flcauchy-inv 2 2 0.0 1.0)
-  
+    
   (: flneg-sqrt/rndd (-> Flonum Flonum))
   (: flneg-sqrt/rndu (-> Flonum Flonum))
   (define (flneg-sqrt/rndd x) (flneg (flsqrt/rndu x)))
