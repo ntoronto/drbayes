@@ -34,125 +34,83 @@
 
 ;; ===================================================================================================
 
-(struct: (X) search-leaf ([value : X] [prob : Prob]) #:transparent)
-
-(struct: (X) search-node ([fst : (Maybe-Promise (Search-Tree X))]
-                          [snd : (Maybe-Promise (Search-Tree X))]
-                          [prob-fst : Prob]
-                          [name : Symbol])
+(struct (S) search-succ ([value : S] [prob : Prob]) #:transparent)
+(struct (F) search-fail ([value : F]) #:transparent)
+(struct (S F) search-node ([left : (Promise (Search-Tree S F))]
+                           [right : (Promise (Search-Tree S F))]
+                           [prob-left : Prob]
+                           [name : Symbol])
   #:transparent)
 
-(define-type (Search-Tree X) (U (search-leaf X) (search-node X)))
-
-(: make-search-node (All (X) (-> (Maybe-Promise (Search-Tree X))
-                                 (Maybe-Promise (Search-Tree X))
-                                 Prob
-                                 Symbol
-                                 (Search-Tree X))))
-(define (make-search-node c1 c2 q1 name)
-  (cond [(prob-1? q1)  (maybe-force c1)]
-        [(prob-0? q1)  (maybe-force c2)]
-        [else  (search-node c1 c2 q1 name)]))
+(define-type (Search-Tree S F) (U (search-succ S)
+                                  (search-fail F)
+                                  (search-node S F)))
 
 ;; ===================================================================================================
 
-(: search-tree-size (All (X) (-> (Search-Tree X) Natural)))
+(: search-tree-size (All (S F) (-> (Search-Tree S F) Natural)))
 (define (search-tree-size t)
-  (cond
-    [(search-node? t)
-     (match-define (search-node c1 c2 q1 name) t)
-     (for/fold ([n : Natural  0]) ([c  (in-list (list c1 c2))])
+  (match t
+    [(search-node cl cr pl name)
+     (for/fold ([n : Natural  0]) ([c  (in-list (list cl cr))])
        (if (or (not (promise? c)) (promise-forced? c))
-           (+ n (search-tree-size (maybe-force c)))
+           (+ n (search-tree-size (force c)))
            n))]
-    [else  1]))
+    [_  1]))
+
+(: search-tree-abstract (All (S F) (-> (Search-Tree S F) Any)))
+(define (search-tree-abstract t)
+  (match t
+    [(search-fail _)  '(search-fail F)]
+    [(search-succ _ p)  '(search-succ S)]
+    [(search-node cl cr pl name)
+     (define cl* (if (promise-forced? cl) (search-tree-abstract (force cl)) 'promise))
+     (define cr* (if (promise-forced? cr) (search-tree-abstract (force cr)) 'promise))
+     (list 'search-node cl* cr* (prob->flonum pl) name)]))
 
 ;; ===================================================================================================
-;; Nonadaptive, independent sampling
+;; Adaptive sampling
+;; Transliterated from Figure 9.22 in the dissertation
 
-(: sample-search-tree-once (All (X) (-> (Search-Tree X) Prob (Values (search-leaf X) Prob))))
-;; Straightforward sampler, useful only for rejection sampling
-;; Returns a leaf in the search tree, and the probability of returning that leaf
-(define (sample-search-tree-once t p)
-  (cond
-    [(search-node? t)
-     (match-define (search-node c1 c2 q1 name) t)
+(: adjusted-node (All (S F) (-> Prob
+                                (Promise (Search-Tree S F))
+                                (Promise (Search-Tree S F))
+                                Prob
+                                Prob
+                                Symbol
+                                (Values Prob (Search-Tree S F)))))
+(define (adjusted-node pt cl cr pl pr name)
+  (cond [(or (prob-0? pl) (prob-1? pr))  (values (prob* pt pr) (force cr))]
+        [(or (prob-0? pr) (prob-1? pl))  (values (prob* pt pl) (force cl))]
+        [else
+         (values (let ([pt  (prob+ (prob* pt pl) (prob* pt pr))])
+                   (if (prob? pt) pt prob-1))
+                 (search-node cl cr (prob-normalize-first pl pr) name))]))
+
+(: sample-search-tree (All (S F) (-> Prob (Search-Tree S F)
+                                     (Values Prob (U S F)
+                                             Prob (Search-Tree S F)))))
+(define (sample-search-tree pt t)
+  (match t
+    [(search-succ x px)
+     ;; Removes zero-probability leaves without altering other leaf probabilities:
+     ;(values pt x pt t)
+     ;; Convergence properties not known, but it seems to work well, and it's necessary when
+     ;; drbayes-always-terminate? is #t
+     (values pt x (prob-min px pt) t)
+     ]
+    [(search-fail x)  (values pt x prob-0 t)]
+    [(search-node cl cr pl name)
      (when search-stats? (increment-search-stat name))
-     (let-values ([(c q)  (if (prob-boolean q1) (values c1 q1) (values c2 (prob1- q1)))])
-       (sample-search-tree-once (maybe-force c) (prob* p q)))]
-    [else
-     (values t p)]))
-
-(: sample-search-tree-once* (All (X) (-> (Search-Tree X) Integer (Values (Listof (search-leaf X))
-                                                                         (Listof Prob)))))
-;; Samples multiple leaves using `sample-search-tree-once'
-(define (sample-search-tree-once* t n)
-  (cond
-    [(not (index? n))   (raise-argument-error 'sample-search-tree-once* "Index" 1 t n)]
-    [else
-     (define: ts : (Listof (search-leaf X))  empty)
-     (define: ps : (Listof Prob)  empty)
-     (let: loop ([i : Positive-Fixnum  1] [ts ts] [ps ps])
-       (cond [(i . <= . n)
-              (when (= 0 (remainder i 100))
-                (printf "i = ~v~n" i)
-                (flush-output))
-              (let-values ([(leaf-t leaf-p)  (sample-search-tree-once t prob-1)])
-                (loop (+ i 1) (cons leaf-t ts) (cons leaf-p ps)))]
-             [else
-              (values ts ps)]))]))
-
-;; ===================================================================================================
-;; Adaptive search
-
-(: sample-search-tree (All (X) (-> (Search-Tree X) Prob (Values (search-leaf X) Prob
-                                                                (Search-Tree X) Prob))))
-;; Like `sample-search-tree-once', but returns an adjusted tree in which the probability of choosing
-;; the leaf is the leaf value's actual probability
-(define (sample-search-tree t p)
-  ;(define-values (leaf-ts leaf-ps) (sample-search-tree-once t p))
-  ;(values leaf-ts leaf-ps t p)
-  (cond
-    [(search-node? t)
-     (match-define (search-node c1 c2 q1 name) t)
-     (when search-stats? (increment-search-stat name))
-     (define fst? (prob-boolean q1))
-     (let-values ([(c1 c2 q1 q2)  (cond [fst?  (values (maybe-force c1) c2 q1 (prob1- q1))]
-                                        [else  (values (maybe-force c2) c1 (prob1- q1) q1)])])
-       (define pq1 (prob* p q1))
-       (let*-values ([(leaf-ts leaf-ps c1 pq1)  (sample-search-tree c1 pq1)]
-                     [(new-q1)  (prob-normalize-first (assert (prob/ pq1 p) prob?) q2)]
-                     [(t)  (make-search-node c1 c2 new-q1 name)])
-         (define q (let ([q  (prob- q1 new-q1)])
-                     (if (prob? q) q prob-0)))
-         (values leaf-ts leaf-ps t (prob* p (prob1- q)))))]
-    [else
-     (define leaf-p (search-leaf-prob t))
-     (values t p
-             t
-             (prob-min p leaf-p)
-             ;(if (prob-0? leaf-p) prob-0 p)
-             )]))
-
-(: sample-search-tree* (All (X) (-> (Search-Tree X) Integer (Values (Listof (search-leaf X))
-                                                                    (Listof Prob)
-                                                                    (Search-Tree X)
-                                                                    Prob))))
-;; Samples multiple leaves using `sample-search-tree'
-(define (sample-search-tree* t n)
-  (cond
-    [(not (index? n))  (raise-argument-error 'sample-search-tree* "Index" 1 t n)]
-    [else
-     (define: ts : (Listof (search-leaf X))  empty)
-     (define: ps : (Listof Prob)  empty)
-     (let: loop ([i : Positive-Fixnum  1] [ts ts] [ps ps] [t t] [q prob-1])
-       (cond [(and (i . <= . n) (not (prob-0? q)))
-              (let-values ([(leaf-t leaf-p t q)  (sample-search-tree t q)])
-                (when (= 0 (remainder i 100))
-                  (printf "i = ~v~n" i)
-                  (flush-output))
-                (loop (+ i 1) (cons leaf-t ts) (cons leaf-p ps) t q))]
-             [else
-              (when (prob-0? q)
-                (printf "bailing because top probability is zero~n"))
-              (values ts ps t q)]))]))
+     (define pr (prob1- pl))
+     (define left? (prob-boolean pl))
+     (let*-values ([(cl cr pl pr)  (if left? (values cl cr pl pr) (values cr cl pr pl))]
+                   [(px x pt* cl*)  (sample-search-tree (prob* pt pl) (force cl))]
+                   [(pl*)  (prob/ pt* pt)]
+                   [(pl*)  (if (prob? pl*) pl* prob-1)]
+                   [(cl*)  (delay cl*)]
+                   [(_)  (force cl*)]
+                   [(pt t)  (if left?
+                                (adjusted-node pt cl* cr pl* pr name)
+                                (adjusted-node pt cr cl* pr pl* name))])
+       (values px x pt t))]))

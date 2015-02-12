@@ -3,6 +3,7 @@
 (require drbayes/private/set
          "../random-sets/random-real-set.rkt"
          "../random-sets/random-bool-set.rkt"
+         "../test-utils.rkt"
          "set-properties.rkt")
 
 (printf "starting...~n")
@@ -33,7 +34,7 @@
     equal?
     pair-set-subseteq?
     pair-set-join
-    pair-set-intersect
+    ((inst intersect->meet Pair-Set) pair-set-intersect)
     empty-pair-set
     pairs
     random-pair-set)
@@ -42,6 +43,6 @@
     pair-set-member?
     pair-set-subseteq?
     pair-set-join
-    pair-set-intersect
+    ((inst intersect->meet Pair-Set) pair-set-intersect)
     random-pair-set
     random-value)))

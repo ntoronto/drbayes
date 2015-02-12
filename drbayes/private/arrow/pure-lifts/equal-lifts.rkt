@@ -21,16 +21,12 @@
      (cond [(or (empty-set? A1) (empty-set? A2))  empty-pre-mapping]
            [else
             (nonempty-pre-mapping
-             #;; Method 1:
-             (if (set-equal? A1 A2)
-                 (if (set-singleton? A1) trues bools)
-                 (if (empty-set? (set-intersect A1 A2)) falses bools))
-             ;; Method 2:
              (cond [(empty-set? (set-intersect A1 A2))  falses]
                    [(and (set-singleton? A1) (set-singleton? A2))  trues]
                    [else  bools])
              (fun (λ (B)
-                    (cond [(set-member? B #f)  (pair-set A1 A2)]
+                    (cond [(set-member? B #f)  (values (pair-set A1 A2) #f)]
                           [(set-member? B #t)  (let ([A  (set-intersect A1 A2)])
-                                                 (set-pair A A))]
-                          [else  empty-set]))))]))))
+                                                 (values (set-pair A A)
+                                                         (set-singleton? A)))]
+                          [else  (values empty-set #t)]))))]))))

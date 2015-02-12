@@ -29,7 +29,7 @@
 (define store-tag 'store)
 
 ;; Set tags
-(: make-set-tag (Symbol -> Tag))
+(: make-set-tag (-> Symbol Tag))
 (define (make-set-tag sym)
   (string->uninterned-symbol (symbol->string sym)))
 
@@ -91,7 +91,7 @@
 (define-type  Nonfull-Basic (U Plain-Basic Empty-Basic))
 (define-type          Basic (U Plain-Basic Full-Basic Empty-Basic))
 
-(: empty-basic? (Any -> Boolean : Empty-Basic))
+(: empty-basic? (-> Any Boolean : Empty-Basic))
 (define (empty-basic? A)
   (or (empty-real-set? A)
       (empty-prob-set? A)
@@ -100,7 +100,7 @@
       (empty-pair-set? A)
       (empty-store-set? A)))
 
-(: full-basic? (Any -> Boolean : Full-Basic))
+(: full-basic? (-> Any Boolean : Full-Basic))
 (define (full-basic? A)
   (or (reals? A)
       (probs? A)
@@ -115,16 +115,16 @@
 (define-type Bot-Basic Nonempty-Basic)
 
 #|
-(define-syntax bot-basic-set (make-rename-transformer #'Bot-Basic-set))
-(define-syntax bot-basic? (make-rename-transformer #'Bot-Basic?))
+(define bot-basic-set Bot-Basic-set)
+(define bot-basic? Bot-Basic?)
 |#
-
-(define-syntax top-basic-set (make-rename-transformer #'Top-Basic-set))
-(define-syntax top-basic? (make-rename-transformer #'Top-Basic?))
 
 (struct: Top-Basic Base-Top-Entry ([set : Nonfull-Basic]) #:transparent)
 
-(: basic-tag (Basic -> Tag))
+(define top-basic-set Top-Basic-set)
+(define top-basic? Top-Basic?)
+
+(: basic-tag (-> Basic Tag))
 (define (basic-tag A)
   (cond [(real-set? A)  real-tag]
         [(prob-set? A)  prob-tag]
@@ -133,16 +133,16 @@
         [(pair-set? A)  pair-tag]
         [(store-set? A)  store-tag]))
 
-(: top-basic-tag (Top-Basic -> Tag))
+(: top-basic-tag (-> Top-Basic Tag))
 (define (top-basic-tag A) (basic-tag (top-basic-set A)))
 
-(: bot-basic (case-> (Bot-Basic -> Bot-Basic)
-                     (Basic -> (U Bot-Basic Empty-Set))))
+(: bot-basic (case-> (-> Bot-Basic Bot-Basic)
+                     (-> Basic (U Bot-Basic Empty-Set))))
 (define (bot-basic A)
   (if (empty-basic? A) empty-set A))
 
-(: top-basic (case-> (Nonfull-Basic -> Top-Basic)
-                     (Basic -> (U Top-Basic Universe))))
+(: top-basic (case-> (-> Nonfull-Basic Top-Basic)
+                     (-> Basic (U Top-Basic Universe))))
 (define (top-basic A)
   (if (full-basic? A) universe (Top-Basic A)))
 
@@ -156,24 +156,24 @@
 ;; ===================================================================================================
 ;; Tagged sets
 
-(define-syntax bot-tagged-tag (make-rename-transformer #'Bot-Tagged-tag))
-(define-syntax bot-tagged-set (make-rename-transformer #'Bot-Tagged-set))
-(define-syntax bot-tagged? (make-rename-transformer #'Bot-Tagged?))
-
-(define-syntax top-tagged-tag (make-rename-transformer #'Top-Tagged-tag))
-(define-syntax top-tagged-set (make-rename-transformer #'Top-Tagged-set))
-(define-syntax top-tagged? (make-rename-transformer #'Top-Tagged?))
-
 (struct: Bot-Tagged Base-Bot-Entry ([tag : Tag] [set : Nonempty-Set]) #:transparent)
 (struct: Top-Tagged Base-Top-Entry ([tag : Tag] [set : Nonfull-Set]) #:transparent)
 
-(: bot-tagged (case-> (Tag Nonempty-Set -> Bot-Tagged)
-                      (Tag Set -> (U Bot-Tagged Empty-Set))))
+(define bot-tagged-tag Bot-Tagged-tag)
+(define bot-tagged-set Bot-Tagged-set)
+(define bot-tagged? Bot-Tagged?)
+
+(define top-tagged-tag Top-Tagged-tag)
+(define top-tagged-set Top-Tagged-set)
+(define top-tagged? Top-Tagged?)
+
+(: bot-tagged (case-> (-> Tag Nonempty-Set Bot-Tagged)
+                      (-> Tag Set (U Bot-Tagged Empty-Set))))
 (define (bot-tagged tag A)
   (if (empty-set? A) A (Bot-Tagged tag A)))
 
-(: top-tagged (case-> (Tag Nonfull-Set -> Top-Tagged)
-                      (Tag Set -> (U Top-Tagged Universe))))
+(: top-tagged (case-> (-> Tag Nonfull-Set Top-Tagged)
+                      (-> Tag Set (U Top-Tagged Universe))))
 (define (top-tagged tag A)
   (if (universe? A) A (Top-Tagged tag A)))
 
@@ -183,11 +183,11 @@
 (define-type Bot-Entry (U Bot-Basic Bot-Tagged))
 (define-type Top-Entry (U Top-Basic Top-Tagged))
 
-(: bot-tag (Bot-Entry -> Tag))
+(: bot-tag (-> Bot-Entry Tag))
 (define (bot-tag A)
   (if (bot-basic? A) (basic-tag A) (bot-tagged-tag A)))
 
-(: top-tag (Top-Entry -> Tag))
+(: top-tag (-> Top-Entry Tag))
 (define (top-tag A)
   (if (top-basic? A) (top-basic-tag A) (top-tagged-tag A)))
 
@@ -197,49 +197,43 @@
 (struct: Bot-Union Base-Bot-Set ([hash : Bot-Union-Hash]) #:transparent)
 (struct: Top-Union Base-Top-Set ([hash : Top-Union-Hash]) #:transparent)
 
-(define-syntax bot-union? (make-rename-transformer #'Bot-Union?))
-(define-syntax top-union? (make-rename-transformer #'Top-Union?))
+(define bot-union? Bot-Union?)
+(define top-union? Top-Union?)
 
-(: bot-union (Bot-Entry Bot-Entry Bot-Entry * -> Bot-Union))
-(define (bot-union A0 A1 . As)
-  (cond [(empty? As)  (Bot-Union ((inst hasheq2 Tag Bot-Entry) (bot-tag A0) A0 (bot-tag A1) A1))]
-        [else  (Bot-Union (make-immutable-hasheq
-                           (map (λ: ([A : Bot-Entry]) (cons (bot-tag A) A))
-                                (list* A0 A1 As))))]))
+(: bot-union (-> Bot-Entry Bot-Entry Bot-Union))
+(define (bot-union A0 A1)
+  (Bot-Union ((inst hasheq2 Tag Bot-Entry) (bot-tag A0) A0 (bot-tag A1) A1)))
 
-(: top-union (Top-Entry Top-Entry Top-Entry * -> Top-Union))
-(define (top-union A0 A1 . As)
-  (cond [(empty? As)  (Top-Union ((inst hasheq2 Tag Top-Entry) (top-tag A0) A0 (top-tag A1) A1))]
-        [else  (Top-Union (make-immutable-hasheq
-                           (map (λ: ([A : Top-Entry]) (cons (top-tag A) A))
-                                (list* A0 A1 As))))]))
+(: top-union (-> Top-Entry Top-Entry Top-Union))
+(define (top-union A0 A1)
+  (Top-Union ((inst hasheq2 Tag Top-Entry) (top-tag A0) A0 (top-tag A1) A1)))
 
-(: bot-union-sets ((U Empty-Set Bot-Entry Bot-Union) -> (Listof Bot-Entry)))
+(: bot-union-sets (-> (U Empty-Set Bot-Entry Bot-Union) (Listof Bot-Entry)))
 (define (bot-union-sets A)
   (cond [(empty-set? A)  empty]
         [(or (bot-basic? A) (bot-tagged? A))  (list A)]
         [else  (hash-values (Bot-Union-hash A))]))
 
-(: top-union-sets ((U Universe Top-Entry Top-Union) -> (Listof Top-Entry)))
+(: top-union-sets (-> (U Universe Top-Entry Top-Union) (Listof Top-Entry)))
 (define (top-union-sets A)
   (cond [(universe? A)  empty]
         [(or (top-basic? A) (top-tagged? A))  (list A)]
         [else  (hash-values (Top-Union-hash A))]))
 
-(: bot-union-ref ((U Empty-Set Bot-Entry Bot-Union) Tag -> (U Empty-Set Bot-Entry)))
+(: bot-union-ref (-> (U Empty-Set Bot-Entry Bot-Union) Tag (U Empty-Set Bot-Entry)))
 (define (bot-union-ref A tag)
   (cond [(empty-set? A)  A]
         [(bot-entry? A)  (if (eq? tag (bot-tag A)) A empty-set)]
         [else  (hash-ref (Bot-Union-hash A) tag (λ () empty-set))]))
 
-(: top-union-ref ((U Universe Top-Entry Top-Union) Tag -> (U Universe Top-Entry)))
+(: top-union-ref (-> (U Universe Top-Entry Top-Union) Tag (U Universe Top-Entry)))
 (define (top-union-ref A tag)
   (cond [(universe? A)   A]
         [(top-entry? A)  (if (eq? tag (top-tag A)) A universe)]
         [else  (hash-ref (Top-Union-hash A) tag (λ () universe))]))
 
-(: bot-union-add ((U Empty-Set Bot-Entry Bot-Union) (U Bot-Entry Bot-Union)
-                                                    -> (U Bot-Entry Bot-Union)))
+(: bot-union-add (-> (U Empty-Set Bot-Entry Bot-Union) (U Bot-Entry Bot-Union)
+                     (U Bot-Entry Bot-Union)))
 (define (bot-union-add A C)
   (cond [(empty-set? A)  C]
         [(bot-union? C)  (for/fold ([A A]) ([C  (in-list (bot-union-sets C))])
@@ -252,7 +246,7 @@
         [else
          (Bot-Union (hash-set (Bot-Union-hash A) (bot-tag C) C))]))
 
-(: bot-union-remove ((U Empty-Set Bot-Entry Bot-Union) Tag -> (U Empty-Set Bot-Entry Bot-Union)))
+(: bot-union-remove (-> (U Empty-Set Bot-Entry Bot-Union) Tag (U Empty-Set Bot-Entry Bot-Union)))
 (define (bot-union-remove A tag)
   (cond [(empty-set? A)  A]
         [(bot-entry? A)  (if (eq? (bot-tag A) tag) empty-set A)]
@@ -262,8 +256,8 @@
                      [(= n 1)  (first (hash-values h))]
                      [else  (Bot-Union h)])]))
 
-(: top-union-add ((U Universe Top-Entry Top-Union) (U Top-Entry Top-Union)
-                                                   -> (U Top-Entry Top-Union)))
+(: top-union-add (-> (U Universe Top-Entry Top-Union) (U Top-Entry Top-Union)
+                     (U Top-Entry Top-Union)))
 (define (top-union-add A C)
   (cond [(universe? A)  C]
         [(top-union? C)  (for/fold ([A A]) ([C  (in-list (top-union-sets C))])
@@ -276,7 +270,7 @@
         [else
          (Top-Union (hash-set (Top-Union-hash A) (top-tag C) C))]))
 
-(: top-union-remove ((U Universe Top-Entry Top-Union) Tag -> (U Universe Top-Entry Top-Union)))
+(: top-union-remove (-> (U Universe Top-Entry Top-Union) Tag (U Universe Top-Entry Top-Union)))
 (define (top-union-remove A tag)
   (cond [(universe? A)   A]
         [(top-entry? A)  (if (eq? (top-tag A) tag) universe A)]

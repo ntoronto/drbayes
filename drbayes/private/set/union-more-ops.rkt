@@ -16,7 +16,7 @@
 
 (provide (all-defined-out))
 
-(: set-equal? (Set Set -> Boolean))
+(: set-equal? (-> Set Set Boolean))
 (define (set-equal? A B)
   (equal? A B)
   #;
@@ -30,19 +30,19 @@
   (define A (real-interval a b a? b?))
   (if (empty-real-set? A) empty-set A))
 
-(: set-pair (case-> (Nonempty-Set Nonempty-Set -> Nonempty-Pair-Set)
-                    (Set Set -> (U Empty-Set Nonempty-Pair-Set))))
+(: set-pair (case-> (-> Nonempty-Set Nonempty-Set Nonempty-Pair-Set)
+                    (-> Set Set (U Empty-Set Nonempty-Pair-Set))))
 (define (set-pair A B)
   (define C (pair-set A B))
   (if (empty-pair-set? C) empty-set C))
 
-(: set-list (case-> (Nonempty-Set * -> Nonempty-Set)
-                    (Set * -> Set)))
+(: set-list (case-> (-> Nonempty-Set * Nonempty-Set)
+                    (-> Set * Set)))
 (define (set-list . As)
   (foldr set-pair nulls As))
 
-(: set-list* (case-> (Nonempty-Set Nonempty-Set * -> Nonempty-Set)
-                     (Set Set * -> Set)))
+(: set-list* (case-> (-> Nonempty-Set Nonempty-Set * Nonempty-Set)
+                     (-> Set Set * Set)))
 (define (set-list* A . As)
   (let loop ([A A] [As As])
     (cond [(empty? As)  A]
@@ -51,12 +51,12 @@
 ;; ===================================================================================================
 ;; Tagging and untagging
 
-(: set-tag (case-> (Nonempty-Set Tag -> Bot-Tagged)
-                   (Set Tag -> (U Bot-Tagged Empty-Set))))
+(: set-tag (case-> (-> Nonempty-Set Tag Bot-Tagged)
+                   (-> Set Tag (U Bot-Tagged Empty-Set))))
 (define (set-tag A tag)
   (bot-tagged tag A))
 
-(: set-untag (Set Tag -> Set))
+(: set-untag (-> Set Tag Set))
 (define (set-untag A tag)
   (cond [(empty-set? A)   empty-set]
         [(universe? A)    universe]
@@ -82,28 +82,28 @@
                    [(top-tagged? A)  full]
                    [else             (loop (top-union-ref A tag))])]))))
 
-(: set-take-reals (Set -> Real-Set))
+(: set-take-reals (-> Set Real-Set))
 (define set-take-reals (make-set-take-basic real-set? real-tag empty-real-set reals))
 
-(: set-take-probs (Set -> Prob-Set))
+(: set-take-probs (-> Set Prob-Set))
 (define set-take-probs (make-set-take-basic prob-set? prob-tag empty-prob-set probs))
 
-(: set-take-bools (Set -> Bool-Set))
+(: set-take-bools (-> Set Bool-Set))
 (define set-take-bools (make-set-take-basic bool-set? bool-tag empty-bool-set bools))
 
-(: set-take-nulls (Set -> Null-Set))
+(: set-take-nulls (-> Set Null-Set))
 (define set-take-nulls (make-set-take-basic null-set? null-tag empty-null-set nulls))
 
-(: set-take-pairs (Set -> Pair-Set))
+(: set-take-pairs (-> Set Pair-Set))
 (define set-take-pairs (make-set-take-basic pair-set? pair-tag empty-pair-set pairs))
 
-(: set-take-stores (Set -> Store-Set))
+(: set-take-stores (-> Set Store-Set))
 (define set-take-stores (make-set-take-basic store-set? store-tag empty-store-set stores))
 
 ;; ===================================================================================================
 ;; Pair projection and unprojection
 
-(: set-projs (Set -> (Values Set Set)))
+(: set-projs (-> Set (Values Set Set)))
 (define (set-projs A)
   (pair-set-projs (set-take-pairs A)))
 
@@ -125,7 +125,7 @@
   (let ([A  (pair-set-unsnd (set-take-pairs A) A2)])
     (if (empty-pair-set? A) empty-set A)))
 
-(: set-proj (Set Natural -> Set))
+(: set-proj (-> Set Natural Set))
 (define (set-proj A j)
   (let ([A  (set-take-pairs A)])
     (cond [(empty-pair-set? A)  empty-set]
@@ -160,21 +160,29 @@
         [(top-union? A)
          'top-union]))
 
-(: real-set-map* (-> (-> Nonempty-Real-Interval Set) Real-Set Set))
+(: real-set-map* (-> (-> Nonempty-Real-Interval (Values Set Boolean)) Real-Set (Values Set Boolean)))
 (define (real-set-map* f I)
-  (cond [(empty-real-set? I)  empty-set]
+  (cond [(empty-real-set? I)  (values empty-set #t)]
         [(or (reals? I) (Plain-Real-Interval? I))  (f I)]
         [else
-         (for/fold ([B : Set  empty-set]) ([I  (in-list (Plain-Real-Interval-List-elements I))])
-           (set-join B (f I)))]))
+         (for/fold ([B : Set  empty-set]
+                    [exact? : Boolean  #t])
+                   ([I  (in-list (Real-Interval-List-elements I))])
+           (let*-values ([(C e1?)  (f I)]
+                         [(B e2?)  (set-join B C)])
+             (values B (and exact? e1? e2?))))]))
 
-(: prob-set-map* (-> (-> Nonempty-Prob-Interval Set) Prob-Set Set))
+(: prob-set-map* (-> (-> Nonempty-Prob-Interval (Values Set Boolean)) Prob-Set (Values Set Boolean)))
 (define (prob-set-map* f I)
-  (cond [(empty-prob-set? I)  empty-set]
+  (cond [(empty-prob-set? I)  (values empty-set #t)]
         [(or (probs? I) (Plain-Prob-Interval? I))  (f I)]
         [else
-         (for/fold ([B : Set  empty-set]) ([I  (in-list (Plain-Prob-Interval-List-elements I))])
-           (set-join B (f I)))]))
+         (for/fold ([B : Set  empty-set]
+                    [exact? : Boolean  #t])
+                   ([I  (in-list (Prob-Interval-List-elements I))])
+           (let*-values ([(C e1?)  (f I)]
+                         [(B e2?)  (set-join B C)])
+             (values B (and exact? e1? e2?))))]))
 
 #|
 (: integer-set-map* (-> (-> Nonempty-Integer-Interval Set) Integer-Set Set))

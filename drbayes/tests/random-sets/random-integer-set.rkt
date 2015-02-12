@@ -38,4 +38,5 @@
 (define (random-integer-set [dist integer-endpoint-dist])
   (define I (random-interval dist))
   (cond [((random) . < . 0.5)  I]
-        [else  (integer-set-join I (random-integer-set dist))]))
+        [else  (let-values ([(I _)  (integer-set-join I (random-integer-set dist))])
+                 I)]))

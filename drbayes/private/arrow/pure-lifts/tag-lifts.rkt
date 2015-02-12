@@ -28,7 +28,7 @@
 (define (tag/pre tag)
   (define fun (make-pre-mapping-fun/memo))
   (make-pre-arrow/memo
-   (λ (A) (nonempty-pre-mapping (set-tag A tag) (fun (λ (B) (set-untag B tag)))))))
+   (λ (A) (nonempty-pre-mapping (set-tag A tag) (fun (λ (B) (values (set-untag B tag) #t)))))))
 
 ;; ===================================================================================================
 ;; Untagging lifts
@@ -46,4 +46,4 @@
    (λ (A)
      (define B (set-untag A tag))
      (cond [(empty-set? B)  empty-pre-mapping]
-           [else  (nonempty-pre-mapping B (fun (λ (B) (set-tag B tag))))]))))
+           [else  (nonempty-pre-mapping B (fun (λ (B) (values (set-tag B tag) #t))))]))))

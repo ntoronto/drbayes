@@ -55,7 +55,7 @@
     (cond [(not (cache?))
            (if (and (universe? A1) (universe? A2))
                pairs
-               (Plain-Pair-Set A1 A2))]
+               (plain-pair-set A1 A2))]
           [(and (eq? A1 last-A1) (eq? A2 last-A2))
            (register-pair-cache-hit!)
            last-A]
@@ -74,26 +74,30 @@
            (set! last-A A)
            A])))
 
-(: make-pre-mapping-fun/memo (-> (-> (-> Nonempty-Set Set) (-> Nonempty-Set Set))))
+(: make-pre-mapping-fun/memo (-> (-> (-> Nonempty-Set (Values Set Boolean))
+                                     (-> Nonempty-Set (Values Set Boolean)))))
 (define (make-pre-mapping-fun/memo)
   (define cache? (cached-boolean-parameter drbayes-preimage-cache?))
   (define check? (cached-boolean-parameter drbayes-preimage-cache-check-bad-misses?))
   (λ (p)
     (: last-B (U #f Nonempty-Set))
     (: last-A Set)
+    (: last-exact? Boolean)
     (define last-B #f)
     (define last-A empty-set)
+    (define last-exact? #t)
     (λ (B)
       (cond [(not (cache?))
              (p B)]
             [(eq? B last-B)
              (register-preimage-cache-hit!)
-             last-A]
+             (values last-A last-exact?)]
             [else
              (register-preimage-cache-miss!)
              (when (and (check?) (equal? B last-B))
                (register-preimage-cache-bad-miss! (set-cache-key B)))
-             (define A (p B))
+             (define-values (A exact?) (p B))
              (set! last-B B)
              (set! last-A A)
-             A]))))
+             (set! last-exact? exact?)
+             (values A exact?)]))))

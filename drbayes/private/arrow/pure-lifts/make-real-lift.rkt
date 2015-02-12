@@ -2,9 +2,10 @@
 
 (require racket/promise
          "../../set.rkt"
-         "../../real.rkt"
          "../types.rkt"
-         "../cache.rkt")
+         "../cache.rkt"
+         "bijection.rkt"
+         "trijection.rkt")
 
 (provide (all-defined-out))
 
@@ -38,9 +39,14 @@
     (define fun (make-pre-mapping-fun/memo))
     (make-pre-arrow/memo
      (λ (A)
-       (define B (img A))
+       (define-values (B B-exact?) (img A))
        (cond [(empty-set? B)  empty-pre-mapping]
-             [else  (nonempty-pre-mapping B (fun (pre A)))])))))
+             [else
+              (define h (pre A))
+              (nonempty-pre-mapping
+               B (fun (λ (B)
+                        (define-values (A A-exact?) (h B))
+                        (values A A-exact?))))])))))
 
 (: strict-monotone/prim (-> Symbol (-> Flonum Value) bijection
                             (Values (-> Bot-Arrow) (-> Pre-Arrow))))
@@ -52,24 +58,28 @@
 ;; Not strictly monotone
 
 (: monotone/pre (-> Nonempty-Real-Set Nonempty-Real-Set
-                    (-> Nonempty-Real-Interval Real-Set)
-                    (-> Nonempty-Real-Interval Real-Set)
+                    (-> Nonempty-Real-Interval (Values Real-Set Boolean))
+                    (-> Nonempty-Real-Interval (Values Real-Set Boolean))
                     (-> Pre-Arrow)))
 (define ((monotone/pre X Y img pre))
   (define fun (make-pre-mapping-fun/memo))
   (make-pre-arrow/memo
   (λ (A)
-    (let* ([A  (set-intersect A X)]
-           [B  (set-intersect Y (monotone-apply img A))])
+    (let*-values ([(A)  (set-intersect A X)]
+                  [(B B-exact?)  (monotone-apply img A)]
+                  [(B)  (set-intersect Y B)])
       (cond [(empty-set? B)  empty-pre-mapping]
-            [else  (nonempty-pre-mapping
-                    B (fun (λ (B) (set-intersect A (monotone-apply pre B)))))])))))
+            [else
+             (nonempty-pre-mapping
+              B (fun (λ (B)
+                       (define-values (C C-exact?) (monotone-apply pre B))
+                       (values (set-intersect A C) (and B-exact? C-exact?)))))])))))
 
 (: monotone/prim (-> Symbol
                      Nonempty-Real-Set Nonempty-Real-Set
                      (-> Flonum Value)
-                     (-> Nonempty-Real-Interval Real-Set)
-                     (-> Nonempty-Real-Interval Real-Set)
+                     (-> Nonempty-Real-Interval (Values Real-Set Boolean))
+                     (-> Nonempty-Real-Interval (Values Real-Set Boolean))
                      (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (monotone/prim name X Y f img pre)
   (values (real/bot name X Y f)
@@ -108,11 +118,15 @@
     (define fun (make-pre-mapping-fun/memo))
     (make-pre-arrow/memo
      (λ (A)
-       (define B (img A))
+       (define-values (B B-exact?) (img A))
        (cond [(empty-set? B)  empty-pre-mapping]
-             [else  (nonempty-pre-mapping B (fun (pre A)))])))))
+             [else
+              (define h (pre A))
+              (nonempty-pre-mapping
+               B (fun (λ (B)
+                        (define-values (A A-exact?) (h B))
+                        (values A A-exact?))))])))))
 
-     
 (: strict-monotone2d/prim (-> Symbol (-> Flonum Flonum Value) trijection
                               (Values (-> Bot-Arrow) (-> Pre-Arrow))))
 (define (strict-monotone2d/prim name f/proc f)

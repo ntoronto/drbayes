@@ -28,52 +28,65 @@
 
 ;; ===================================================================================================
 
-(: inverse-cdf-img (-> Nonempty-Real-Set (-> Flonum Flonum) (-> Flonum Flonum) (-> Set Set)))
+(: inverse-cdf-img (-> Nonempty-Real-Set (-> Flonum Flonum) (-> Flonum Flonum)
+                       (-> Set (Values Set Boolean))))
 (define ((inverse-cdf-img Y f/rndd f/rndu) A)
-  (set-intersect
-   (prob-set-map* (λ (A)
-                    (define-values (a1 a2 a1? a2?) (prob-interval-fields A))
-                    (define B (real-interval (f/rndd (Prob-value a1))
-                                             (f/rndu (Prob-value a2))
-                                             a1?
-                                             a2?))
-                    (if (empty-real-set? B) empty-set B))
-                  (set-take-probs A))
-   Y))
+  (define-values (B B-exact?)
+    (prob-set-map*
+     (λ (A)
+       (define-values (a1 a2 a1? a2?) (prob-interval-fields A))
+       (define B (real-interval (f/rndd (Prob-value a1))
+                                (f/rndu (Prob-value a2))
+                                a1?
+                                a2?))
+       (values (if (empty-real-set? B) empty-set B)
+               #t))
+     (set-take-probs A)))
+  (values (set-intersect Y B) B-exact?))
 
 (: inverse-cdf-pre (-> Nonempty-Real-Set (-> Flonum Flonum) (-> Flonum Flonum)
-                       (-> Set (-> Set Set))))
+                       (-> Set (-> Set (Values Set Boolean)))))
 (define ((inverse-cdf-pre Y f/rndd f/rndu) A)
   (let ([A  (set-intersect A probs)])
     (λ (B)
-      (set-intersect
-       (real-set-map* (λ (B)
-                        (define-values (b1 b2 b1? b2?) (real-interval-fields B))
-                        (define A (prob-interval (Prob (f/rndd b1))
-                                                 (Prob (f/rndu b2))
-                                                 b1?
-                                                 b2?))
-                        (if (empty-prob-set? A) empty-set A))
-                      (set-take-reals (set-intersect B Y)))
-       A))))
+      (define-values (C C-exact?)
+        (real-set-map*
+         (λ (B)
+           (define-values (b1 b2 b1? b2?) (real-interval-fields B))
+           (define A (prob-interval (Prob (f/rndd b1))
+                                    (Prob (f/rndu b2))
+                                    b1?
+                                    b2?))
+           (values (if (empty-prob-set? A) empty-set A)
+                   #t))
+         (set-take-reals (set-intersect B Y))))
+      (values (set-intersect C A) C-exact?))))
 
-(: inverse-cdf-img/fake-rnd (-> Nonempty-Real-Set (-> Flonum Flonum) Index (-> Set Set)))
+(: inverse-cdf-img/fake-rnd (-> Nonempty-Real-Set (-> Flonum Flonum) Index
+                                (-> Set (Values Set Boolean))))
 (define (inverse-cdf-img/fake-rnd Y f n)
   (inverse-cdf-img Y (λ (x) (flstep* (f x) (- n))) (λ (x) (flstep* (f x) n))))
 
 (: inverse-cdf-pre/fake-rnd (-> Nonempty-Real-Set (-> Flonum Flonum) Index
-                                (-> Set (-> Set Set))))
+                                (-> Set (-> Set (Values Set Boolean)))))
 (define (inverse-cdf-pre/fake-rnd Y f n)
   (inverse-cdf-pre Y
                    (λ (y) (flprob-fast-canonicalize (flstep* (f y) (- n))))
                    (λ (y) (flprob-fast-canonicalize (flstep* (f y) n)))))
 
-(: make-pre-arrow (-> (-> Nonempty-Set Set) (-> Nonempty-Set (-> Nonempty-Set Set)) (-> Pre-Arrow)))
+(: make-pre-arrow (-> (-> Nonempty-Set (Values Set Boolean))
+                      (-> Nonempty-Set (-> Nonempty-Set (Values Set Boolean)))
+                      (-> Pre-Arrow)))
 (define (make-pre-arrow img pre)
   (λ ()
     (define fun (make-pre-mapping-fun/memo))
     (make-pre-arrow/memo
      (λ (A)
-       (define B (img A))
+       (define-values (B B-exact?) (img A))
        (cond [(empty-set? B)  empty-pre-mapping]
-             [else  (nonempty-pre-mapping B (fun (pre A)))])))))
+             [else
+              (define h (pre A))
+              (nonempty-pre-mapping
+               B (fun (λ (B)
+                        (define-values (A A-exact?) (h B))
+                        (values A (and A-exact? B-exact?)))))])))))

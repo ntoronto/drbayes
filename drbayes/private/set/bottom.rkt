@@ -1,11 +1,13 @@
 #lang typed/racket/base
 
-(provide (all-defined-out))
+(provide (rename-out [-Bottom Bottom])
+         bottom
+         bottom?
+         bottom-message)
 
-(require (for-syntax racket/base))
+(struct Bottom ([message : (Promise String)]) #:transparent)
 
-(struct: Bottom ([message : (Promise String)]) #:transparent)
-
-(define-syntax bottom (make-rename-transformer #'Bottom))
-(define-syntax bottom? (make-rename-transformer #'Bottom?))
-(define-syntax bottom-message (make-rename-transformer #'Bottom-message))
+(define-type -Bottom Bottom)
+(define bottom Bottom)
+(define bottom? Bottom?)
+(define bottom-message Bottom-message)

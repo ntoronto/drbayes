@@ -14,7 +14,7 @@
          prob-0 prob-0?
          prob-1 prob-1?
          prob->flonum prob->flonum/rndd prob->flonum/rndu
-         flonum->prob
+         flonum->prob flonum->prob/rndd flonum->prob/rndu
          prob1-
          prob* prob*/rndd prob*/rndu
          prob/ prob//rndd prob//rndu
@@ -47,10 +47,14 @@
 (define prob->flonum/rndd (λ ([x : Prob]) (flprob->flonum/rndd (Prob-value x))))
 (define prob->flonum/rndu (λ ([x : Prob]) (flprob->flonum/rndu (Prob-value x))))
 
-(: flonum->prob (-> Flonum (U Bad-Prob Prob)))
-(define (flonum->prob p)
+(: make-flonum->prob (-> (-> Flonum Flonum) (-> Flonum (U Bad-Prob Prob))))
+(define ((make-flonum->prob flonum->flprob) p)
   (define x (flonum->flprob p))
   (if (flnan? x) bad-prob (Prob x)))
+
+(define flonum->prob (make-flonum->prob flonum->flprob))
+(define flonum->prob/rndd (make-flonum->prob flonum->flprob/rndd))
+(define flonum->prob/rndu (make-flonum->prob flonum->flprob/rndu))
 
 (: make-prob-2d-fun (-> (-> Flonum Flonum Flonum) (-> Prob Prob (U Bad-Prob Prob))))
 (define (make-prob-2d-fun f)

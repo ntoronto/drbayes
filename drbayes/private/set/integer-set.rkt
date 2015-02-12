@@ -35,7 +35,7 @@
 
 (: integer->singleton (-> Integer Plain-Integer-Interval))
 (define (integer->singleton x)
-  (Plain-Integer-Interval x x #t #t))
+  (plain-integer-interval x x #t #t))
 
 (: integer-interval-fields (-> Nonempty-Integer-Interval
                                (Values Extended-Integer Extended-Integer Boolean Boolean)))

@@ -10,7 +10,7 @@
 
 (printf "starting...~n")
 
-(interval-max-splits 4)
+(drbayes-sample-max-splits 4)
 (define n 5000)
 
 ;; Priors

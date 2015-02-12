@@ -50,7 +50,7 @@
                    (format "~a: image failed: A = ~v; Y = ~v; a = ~v; b = ~v" name X Y a b)))
      
      (define B (random-range-set))
-     (define A (preimage/pre h* B))
+     (define-values (A A-exact?) (preimage/pre h* B))
      
      (unless (bottom? b)
        (check-prop (implies (set-member? B b) (set-member? A a))
@@ -88,8 +88,10 @@
 (test-unary-op 'ceiling (ceiling/bot) (ceiling/pre) n)
 (test-unary-op 'round (round/bot) (round/pre) n)
 (test-unary-op 'truncate (truncate/bot) (truncate/pre) n)
-(test-unary-op 'cauchy (cauchy/bot) (cauchy/pre) n)
-(test-unary-op 'normal (normal/bot) (normal/pre) n)
+
+(test-unary-op 'cauchy-inv-cdf (cauchy-inv-cdf/bot) (cauchy-inv-cdf/pre) n)
+(test-unary-op 'normal-inv-cdf (normal-inv-cdf/bot) (normal-inv-cdf/pre) n)
+
 (test-unary-op 'abs (abs/bot) (abs/pre) n)
 (test-unary-op 'sqr (sqr/bot) (sqr/pre) n)
 (test-unary-op 'recip (recip/bot) (recip/pre) n)

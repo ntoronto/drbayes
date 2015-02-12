@@ -32,4 +32,5 @@
 (define (random-prob-set [dist prob-endpoint-dist])
   (define I (random-prob-interval dist))
   (cond [(< (random) 0.5)  I]
-        [else  (prob-set-join I (random-prob-set dist))]))
+        [else  (let-values ([(I _)  (prob-set-join I (random-prob-set dist))])
+                 I)]))

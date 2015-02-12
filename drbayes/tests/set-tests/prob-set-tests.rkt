@@ -2,6 +2,7 @@
 
 (require drbayes/private/set
          "../random-sets/random-prob-set.rkt"
+         "../test-utils.rkt"
          "set-properties.rkt")
 
 (printf "starting...~n")
@@ -12,7 +13,7 @@
     equal?
     prob-set-subseteq?
     prob-set-join
-    prob-set-intersect
+    ((inst intersect->meet Prob-Set) prob-set-intersect)
     empty-prob-set
     probs
     random-prob-set)
@@ -21,6 +22,6 @@
     prob-set-member?
     prob-set-subseteq?
     prob-set-join
-    prob-set-intersect
+    ((inst intersect->meet Prob-Set) prob-set-intersect)
     random-prob-set
     random-prob)))

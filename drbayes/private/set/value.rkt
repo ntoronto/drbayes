@@ -74,26 +74,3 @@
            (bottom (delay (format "value-list-ref: expected list; given ~e" orig-v)))]
           [(zero? j)  (car v)]
           [else       (loop (cdr v) (- j 1))])))
-
-;; ===================================================================================================
-;; Singleton
-
-(: value->singleton (Value -> Bot-Entry))
-(define (value->singleton v)
-  (cond [(flonum? v)   (flonum->singleton v)]
-        [(boolean? v)  (boolean->singleton v)]
-        [(null? v)     nulls]
-        [(pair? v)     (pair->singleton v)]
-        [(tagged-value? v)  (tagged-value->singleton v)]
-        [else  (raise-argument-error 'value->singleton
-                                     "Flonum, Boolean, Null, Pair or tagged-value" v)]))
-
-(: pair->singleton ((Pair Value Value) -> Bot-Basic))
-(define (pair->singleton x)
-  (Plain-Pair-Set (value->singleton (car x))
-                  (value->singleton (cdr x))))
-
-(: tagged-value->singleton (tagged-value -> Bot-Tagged))
-(define (tagged-value->singleton v)
-  (match-define (tagged-value tag val) v)
-  (bot-tagged tag (value->singleton val)))

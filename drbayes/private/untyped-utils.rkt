@@ -8,10 +8,6 @@
 (provide (all-defined-out)
          (for-syntax make-head-form))
 
-(define-syntax-rule (maybe-force p-expr)
-  (let ([p p-expr])
-    (if (promise? p) (force p) p)))
-
 (define-for-syntax ((make-head-form id) stx)
   (syntax-case stx ()
     [(_ . es)  (quasisyntax/loc stx (#,id . es))]

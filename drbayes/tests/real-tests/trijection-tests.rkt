@@ -4,7 +4,7 @@
          typed/rackunit
          math/flonum
          "../../private/set.rkt"
-         "../../private/real.rkt"
+         "../../private/arrow/pure-lifts/trijection.rkt"
          "utils.rkt")
 
 (: border-function (-> Boolean Boolean Flonum Flonum Flonum Flonum Flonum Flonum

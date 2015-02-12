@@ -26,16 +26,16 @@
             (if (= b +inf.0) #f b?)))
   )
 
-(define positive-interval (Plain-Real-Interval 0.0 +inf.0 #f #f))
-(define negative-interval (Plain-Real-Interval -inf.0 -0.0 #f #f))
-(define nonnegative-interval (Plain-Real-Interval 0.0 +inf.0 #t #f))
-(define nonpositive-interval (Plain-Real-Interval -inf.0 -0.0 #f #t))
-(define zero-interval (Plain-Real-Interval +0.0 -0.0 #t #t))
-(define unit-interval (Plain-Real-Interval 0.0 1.0 #t #t))
+(define positive-interval (plain-real-interval 0.0 +inf.0 #f #f))
+(define negative-interval (plain-real-interval -inf.0 -0.0 #f #f))
+(define nonnegative-interval (plain-real-interval 0.0 +inf.0 #t #f))
+(define nonpositive-interval (plain-real-interval -inf.0 -0.0 #f #t))
+(define zero-interval (plain-real-interval +0.0 -0.0 #t #t))
+(define unit-interval (plain-real-interval 0.0 1.0 #t #t))
 
-(: flonum->singleton (-> Flonum Plain-Real-Set))
+(: flonum->singleton (-> Flonum Plain-Real-Interval))
 (define (flonum->singleton x)
-  (cond [(< -inf.0 x +inf.0)  (Plain-Real-Interval x x #t #t)]
+  (cond [(< -inf.0 x +inf.0)  (plain-real-interval x x #t #t)]
         [else  (raise-argument-error 'flonum->singleton "rational Flonum" x)]))
 
 (: real-interval-fields (-> Nonempty-Real-Interval (Values Flonum Flonum Boolean Boolean)))

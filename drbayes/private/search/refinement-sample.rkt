@@ -23,8 +23,7 @@
 
 (: refinement-sample (-> Refiner Store-Set Prob Prob Indexes (U #f store-set-sample)))
 (define (refinement-sample refine S numer denom idxs)
-  (cond [(empty-store-set? S)  (printf "refinement-sample: empty store set~n")
-                               #f]
+  (cond [(empty-store-set? S)  #f]
         [(empty? idxs)  (store-set-sample S numer denom)]
         [else  (let ([idx  (first idxs)]
                      [idxs  (rest idxs)])
@@ -39,10 +38,12 @@
   (define B (store-set-branch-proj S j))
   (cond [(eq? B trues)   (refinement-sample refine S numer denom (append (force t-idxs) idxs))]
         [(eq? B falses)  (refinement-sample refine S numer denom (append (force f-idxs) idxs))]
+        [else  #f]
+        #;; Don't have a clue whether this is a correct extension to the algorithm
         [else  (define-values (B new-idxs q)
                  (cond [(< (random) 0.5)  (values trues  (force t-idxs) prob-0.5)]
                        [else              (values falses (force f-idxs) prob-0.5)]))
-               (let ([S  (refine (store-set-branch-unproj S j B))])
+               (let-values ([(S _)  (refine (store-set-branch-unproj S j B))])
                  (refinement-sample refine S (prob* numer q) denom (append new-idxs idxs)))]))
 
 (: refinement-sample/ivl (-> Refiner Nonempty-Store-Set Prob Prob random-index Indexes
@@ -52,10 +53,10 @@
   (define I (store-set-random-proj S j))
   (define x (prob-set-sample-point I))
   (cond [(prob? x)
-         (define J (Plain-Prob-Interval x x #t #t))
+         (define J (prob->singleton x))
          (define q (prob-set-measure I))
-         (let ([S  (refine (store-set-random-unproj S j J))])
+         (let-values ([(S _)  (refine (store-set-random-unproj S j J))])
            (refinement-sample refine S numer (prob* denom q) idxs))]
         [else
-         (printf "I = ~v~n" I)
+         (printf "Probability interval too narrow: I = ~v~n" I)
          #f]))

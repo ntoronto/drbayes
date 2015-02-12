@@ -1,12 +1,10 @@
 #lang typed/racket/base
 
 (require racket/match
-         racket/list
          typed/rackunit
          math/flonum
          "../../private/set.rkt"
-         "../../private/flonum.rkt"
-         "../../private/real.rkt"
+         "../../private/arrow/pure-lifts/bijection.rkt"
          "utils.rkt")
 
 (: boundary-function (-> Boolean Flonum Flonum Flonum Flonum (-> Flonum Flonum)))

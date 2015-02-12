@@ -2,8 +2,8 @@
 
 (require racket/match
          racket/list
-         "../set.rkt"
-         "../flonum.rkt")
+         "../../set.rkt"
+         "../../flonum.rkt")
 
 (provide (all-defined-out))
 
@@ -13,23 +13,37 @@
 (: strictly-monotone2d-image (-> Boolean Boolean
                                  (-> Flonum Flonum Flonum)
                                  (-> Flonum Flonum Flonum)
-                                 Set Set
-                                 Set))
+                                 Real-Set Real-Set
+                                 (Values Real-Set Boolean)))
 (define (strictly-monotone2d-image inc1? inc2? f/rndd f/rndu A B)
-  (bot-basic
-   (real-set-map
-    (λ (A)
-      (let-values ([(a1 a2 a1? a2?)  (let-values ([(a1 a2 a1? a2?)  (real-interval-fields A)])
-                                       (cond [inc1?  (values a1 a2 a1? a2?)]
-                                             [else   (values a2 a1 a2? a1?)]))])
-        (real-set-map
-         (λ (B)
-           (let-values ([(b1 b2 b1? b2?)  (let-values ([(b1 b2 b1? b2?)  (real-interval-fields B)])
-                                            (cond [inc2?  (values b1 b2 b1? b2?)]
-                                                  [else   (values b2 b1 b2? b1?)]))])
-             (real-interval (f/rndd a1 b1) (f/rndu a2 b2) (and a1? b1?) (and a2? b2?))))
-         (set-take-reals B))))
-    (set-take-reals A))))
+  (real-set-map
+   (λ (A)
+     (let-values ([(a1 a2 a1? a2?)  (let-values ([(a1 a2 a1? a2?)  (real-interval-fields A)])
+                                      (cond [inc1?  (values a1 a2 a1? a2?)]
+                                            [else   (values a2 a1 a2? a1?)]))])
+       (real-set-map
+        (λ (B)
+          (let-values ([(b1 b2 b1? b2?)  (let-values ([(b1 b2 b1? b2?)  (real-interval-fields B)])
+                                           (cond [inc2?  (values b1 b2 b1? b2?)]
+                                                 [else   (values b2 b1 b2? b1?)]))])
+            (values (real-interval (f/rndd a1 b1) (f/rndu a2 b2) (and a1? b1?) (and a2? b2?))
+                    #f)))
+        B)))
+   A))
+
+(: interval2d-image (-> Boolean Boolean
+                        (-> Flonum Flonum Flonum)
+                        (-> Flonum Flonum Flonum)
+                        Nonempty-Real-Interval Nonempty-Real-Interval
+                        Real-Interval))
+(define (interval2d-image inc1? inc2? f/rndd f/rndu A B)
+  (let-values ([(a1 a2 a1? a2?)  (let-values ([(a1 a2 a1? a2?)  (real-interval-fields A)])
+                                   (cond [inc1?  (values a1 a2 a1? a2?)]
+                                         [else   (values a2 a1 a2? a1?)]))]
+               [(b1 b2 b1? b2?)  (let-values ([(b1 b2 b1? b2?)  (real-interval-fields B)])
+                                   (cond [inc2?  (values b1 b2 b1? b2?)]
+                                         [else   (values b2 b1 b2? b1?)]))])
+    (real-interval (f/rndd a1 b1) (f/rndu a2 b2) (and a1? b1?) (and a2? b2?))))
 
 ;; ===================================================================================================
 ;; Trijections (axis-invertible functions and their axial inverses)
@@ -66,29 +80,68 @@
 (define (trijection-second-inverse f)
   (trijection-first-inverse (trijection-first-inverse f)))
 
-(: trijection-image (-> trijection (-> Set Set)))
+(: trijection-image (-> trijection (-> Set (Values Set Boolean))))
 (define (trijection-image f)
   (match-define (trijection inc1? inc2? X Y Z fc/rndd fc/rndu _ _ _ _) f)
   (λ (A×B)
     (define-values (A B) (set-projs A×B))
-    (let ([A  (set-intersect A X)]
-          [B  (set-intersect B Y)])
-      (set-intersect (strictly-monotone2d-image inc1? inc2? fc/rndd fc/rndu A B) Z))))
+    (let ([A  (set-take-reals (set-intersect A X))]
+          [B  (set-take-reals (set-intersect B Y))])
+      (define-values (C C-exact?) (strictly-monotone2d-image inc1? inc2? fc/rndd fc/rndu A B))
+      (values (set-intersect (bot-basic C) Z) C-exact?))))
 
-(: trijection-preimage (-> trijection (-> Set (-> Set Set))))
+(: trijection-preimage (-> trijection (-> Set (-> Nonempty-Set (Values Set Boolean)))))
 (define (trijection-preimage f)
-  (match-define (trijection fc-inc1? fc-inc2? X Y Z _ _ fa/rndd fa/rndu fb/rndd fb/rndu) f)
+  (match-define (trijection fc-inc1? fc-inc2? X Y Z
+                            fc/rndd fc/rndu
+                            fa/rndd fa/rndu
+                            fb/rndd fb/rndu)
+    f)
   (define-values (fa-inc1? fa-inc2?) (first-inverse-directions fc-inc1? fc-inc2?))
   (define-values (fb-inc1? fb-inc2?) (first-inverse-directions fa-inc1? fa-inc2?))
   (λ (A×B)
     (define-values (A B) (set-projs A×B))
-    (let ([A  (set-intersect A X)]
-          [B  (set-intersect B Y)])
+    (let ([X  (set-take-reals (set-intersect A X))]
+          [Y  (set-take-reals (set-intersect B Y))])
       (λ (C)
-        (let ([C  (set-intersect C Z)])
-          (set-pair
-           (set-intersect (strictly-monotone2d-image fa-inc1? fa-inc2? fa/rndd fa/rndu B C) A)
-           (set-intersect (strictly-monotone2d-image fb-inc1? fb-inc2? fb/rndd fb/rndu C A) B)))))))
+        (real-set-map*
+         (λ (C)
+           (real-set-map*
+            (λ (X)
+              (real-set-map*
+               (λ (Y)
+                 (define A (interval2d-image fa-inc1? fa-inc2? fa/rndd fa/rndu Y C))
+                 (define B (interval2d-image fb-inc1? fb-inc2? fb/rndd fb/rndu C X))
+                 (let ([A  (real-interval-intersect A X)]
+                       [B  (real-interval-intersect B Y)])
+                   (cond [(or (empty-real-set? A) (empty-real-set? B))  (values empty-set #t)]
+                         [else
+                          (define Z (interval2d-image fc-inc1? fc-inc2? fc/rndd fc/rndu A B))
+                          (values (set-pair (bot-basic A) (bot-basic B))
+                                  (real-interval-subseteq? Z C))])))
+               Y))
+            X))
+         (set-take-reals (set-intersect C Z)))))))
+
+#;
+(define (trijection-preimage f)
+  (match-define (trijection fc-inc1? fc-inc2? X Y Z _ _ fa/rndd fa/rndu fb/rndd fb/rndu)
+    f)
+  (define-values (fa-inc1? fa-inc2?) (first-inverse-directions fc-inc1? fc-inc2?))
+  (define-values (fb-inc1? fb-inc2?) (first-inverse-directions fa-inc1? fa-inc2?))
+  (λ (A×B)
+    (define-values (A B) (set-projs A×B))
+    (let ([X  (set-take-reals (set-intersect A X))]
+          [Y  (set-take-reals (set-intersect B Y))])
+      (λ (C)
+        (let ([C  (set-take-reals (set-intersect C Z))])
+          (define-values (A A-exact?)
+            (strictly-monotone2d-image fa-inc1? fa-inc2? fa/rndd fa/rndu Y C))
+          (define-values (B B-exact?)
+            (strictly-monotone2d-image fb-inc1? fb-inc2? fb/rndd fb/rndu C X))
+          (values (set-pair (bot-basic (real-set-intersect A X))
+                            (bot-basic (real-set-intersect B Y)))
+                  (and A-exact? B-exact? #f)))))))
 
 ;; ===================================================================================================
 ;; Some trijections
@@ -180,36 +233,36 @@ b = log(c)/log(a)
 
 (define trij-expt++
   (trijection #t #t
-              (Plain-Real-Interval 1.0 +inf.0 #f #f)
+              (plain-real-interval 1.0 +inf.0 #f #f)
               positive-interval
-              (Plain-Real-Interval 1.0 +inf.0 #f #f)
+              (plain-real-interval 1.0 +inf.0 #f #f)
               flexpt/rndd flexpt/rndu
               (zeros1+ flexptinv1/rndd) (zeros1+ flexptinv1/rndu)
               flexptinv2/rndd flexptinv2/rndu))
 
 (define trij-expt+-
   (trijection #f #t
-              (Plain-Real-Interval 1.0 +inf.0 #f #f)
+              (plain-real-interval 1.0 +inf.0 #f #f)
               negative-interval
-              (Plain-Real-Interval 0.0 1.0 #f #f)
+              (plain-real-interval 0.0 1.0 #f #f)
               flexpt/rndd flexpt/rndu
               flexptinv1/rndd flexptinv1/rndu
               flexptinv2/rndd flexptinv2/rndu))
 
 (define trij-expt-+
   (trijection #t #f
-              (Plain-Real-Interval 0.0 1.0 #f #f)
+              (plain-real-interval 0.0 1.0 #f #f)
               positive-interval
-              (Plain-Real-Interval 0.0 1.0 #f #f)
+              (plain-real-interval 0.0 1.0 #f #f)
               flexpt/rndd flexpt/rndu
               (zeros2+ (zeros1+ flexptinv1/rndd)) (zeros2+ (zeros1+ flexptinv1/rndu))
               flexptinv2/rndd flexptinv2/rndu))
 
 (define trij-expt--
   (trijection #f #f
-              (Plain-Real-Interval 0.0 1.0 #f #f)
+              (plain-real-interval 0.0 1.0 #f #f)
               negative-interval
-              (Plain-Real-Interval 1.0 +inf.0 #f #f)
+              (plain-real-interval 1.0 +inf.0 #f #f)
               flexpt/rndd flexpt/rndu
               flexptinv1/rndd flexptinv1/rndu
               flexptinv2/rndd flexptinv2/rndu))

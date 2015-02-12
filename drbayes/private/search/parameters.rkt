@@ -19,21 +19,20 @@
 
 (: drbayes-refinement-search? (Parameterof Boolean))
 (: drbayes-refinement-sample? (Parameterof Boolean))
-(: drbayes-refinement-axis-prob-min (Parameterof (U Flonum Prob) Prob))
+(: drbayes-refinement-max-splits (Parameterof Natural))
 (: drbayes-refinement-prob-min (Parameterof (U Flonum Prob) Prob))
 
 (define drbayes-refinement-search? (make-parameter #t))
 (define drbayes-refinement-sample? (make-parameter #t))
-(define drbayes-refinement-axis-prob-min (make-parameter prob-0 (->prob probs)))
+(define drbayes-refinement-max-splits (make-parameter 0))
 (define drbayes-refinement-prob-min (make-parameter prob-0 (->prob probs)))
 
 ;; ===================================================================================================
 ;; Sampler parameters
 
-(: drbayes-sample-axis-prob-min (Parameterof (U Flonum Prob) Prob))
+(: drbayes-sample-max-splits (Parameterof Natural))
 
-(define drbayes-sample-axis-prob-min
-  (make-parameter (Prob (fllog #i1/32)) (->prob (Plain-Prob-Interval prob-0 prob-1 #f #t))))
+(define drbayes-sample-max-splits (make-parameter 3))
 
 ;; ===================================================================================================
 ;; Enumerator parameters
@@ -42,7 +41,7 @@
 (: drbayes-enumerate-relative-prob-min (Parameterof (U Flonum Prob) Prob))
 
 (define drbayes-enumerate-prob-min
-  (make-parameter prob-1 (->prob (Plain-Prob-Interval prob-0 prob-1 #f #t))))
+  (make-parameter prob-1 (->prob (plain-prob-interval prob-0 prob-1 #f #t))))
 
 (define drbayes-enumerate-relative-prob-min
-  (make-parameter (Prob (fllog #i1/1024)) (->prob (Plain-Prob-Interval prob-0 prob-1 #f #t))))
+  (make-parameter (Prob (fllog #i1/1024)) (->prob (plain-prob-interval prob-0 prob-1 #f #t))))

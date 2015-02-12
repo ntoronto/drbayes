@@ -29,7 +29,7 @@
 
 (: prob->singleton (-> Prob Plain-Prob-Set))
 (define (prob->singleton x)
-  (Plain-Prob-Interval x x #t #t))
+  (plain-prob-interval x x #t #t))
 
 (: prob-interval-fields (-> Nonempty-Prob-Interval (Values Prob Prob Boolean Boolean)))
 (define (prob-interval-fields I)
@@ -40,14 +40,18 @@
               (Plain-Prob-Interval-min? I)
               (Plain-Prob-Interval-max? I))))
 
-(: prob-interval-measure (-> Prob-Interval Prob))
-(define (prob-interval-measure I)
+(: make-prob-interval-measure (-> (-> Prob Prob (U Prob Bad-Prob)) (-> Prob-Interval Prob)))
+(define ((make-prob-interval-measure prob-) I)
   (cond [(empty-prob-set? I)  prob-0]
         [(probs? I)   prob-1]
         [else
          (define p (prob- (Plain-Prob-Interval-max I) (Plain-Prob-Interval-min I)))
          (cond [(prob? p)  p]
                [else  (error 'prob-interval-measure "result is not a probability; given ~e" I)])]))
+
+(define prob-interval-measure (make-prob-interval-measure prob-))
+(define prob-interval-measure/rndd (make-prob-interval-measure prob-/rndd))
+(define prob-interval-measure/rndu (make-prob-interval-measure prob-/rndu))
 
 (: prob-next (-> Prob Prob))
 (define (prob-next x)
@@ -74,11 +78,22 @@
 ;; ===================================================================================================
 ;; More ops
 
-(: prob-interval-list-measure (-> (Listof+2 Nonempty-Prob-Interval) Prob))
-(define (prob-interval-list-measure Is)
+(: make-prob-interval-list-measure (-> (-> Nonempty-Prob-Interval Prob)
+                                       (-> Prob Prob (U Prob Bad-Prob))
+                                       (-> (Listof+2 Nonempty-Prob-Interval) Prob)))
+(define ((make-prob-interval-list-measure prob-interval-measure prob+) Is)
   (for/fold ([q : Prob  prob-0]) ([I  (in-list Is)])
     (let ([q  (prob+ q (prob-interval-measure I))])
       (if (prob? q) q prob-1))))
+
+(define prob-interval-list-measure
+  (make-prob-interval-list-measure prob-interval-measure prob+))
+
+(define prob-interval-list-measure/rndd
+  (make-prob-interval-list-measure prob-interval-measure/rndd prob+/rndd))
+
+(define prob-interval-list-measure/rndu
+  (make-prob-interval-list-measure prob-interval-measure/rndu prob+/rndu))
 
 (: prob-interval-list-probs (-> (Listof+2 Nonempty-Prob-Interval) (U #f (Listof+2 Prob))))
 (define (prob-interval-list-probs Is)
@@ -90,19 +105,30 @@
                    (if (prob? p) p prob-1))
                  Is)]))
 
-(: prob-set-measure (-> Prob-Set Prob))
-(define (prob-set-measure I)
+(: make-prob-set-measure (-> (-> Plain-Prob-Interval Prob)
+                             (-> (Listof+2 Plain-Prob-Interval) Prob)
+                             (-> Prob-Set Prob)))
+(define ((make-prob-set-measure prob-interval-measure prob-interval-list-measure) I)
   (cond [(empty-prob-set? I)  prob-0]
         [(probs? I)  prob-1]
         [(Plain-Prob-Interval? I)   (prob-interval-measure I)]
-        [else  (prob-interval-list-measure (Plain-Prob-Interval-List-elements I))]))
+        [else  (prob-interval-list-measure (Prob-Interval-List-elements I))]))
+
+(define prob-set-measure
+  (make-prob-set-measure prob-interval-measure prob-interval-list-measure))
+
+(define prob-set-measure/rndd
+  (make-prob-set-measure prob-interval-measure/rndd prob-interval-list-measure/rndd))
+
+(define prob-set-measure/rndu
+  (make-prob-set-measure prob-interval-measure/rndu prob-interval-list-measure/rndu))
 
 (: prob-set-sample-point (-> Nonempty-Prob-Set (U Bad-Prob Prob)))
 (define (prob-set-sample-point I)
   (cond [(or (probs? I) (Plain-Prob-Interval? I))  (prob-interval-sample-point I)]
         [else
          (define q (prob-set-measure I))
-         (define Is (filter prob-interval-can-sample? (Plain-Prob-Interval-List-elements I)))
+         (define Is (filter prob-interval-can-sample? (Prob-Interval-List-elements I)))
          (cond [(empty? Is)  bad-prob]
                [(empty? (rest Is))  (prob-interval-sample-point (first Is))]
                [else
@@ -111,13 +137,16 @@
                            (prob-interval-sample-point (list-ref Is i))]
                       [else  bad-prob])])]))
 
-(: prob-set-self-join (case-> (-> Nonempty-Prob-Set Nonempty-Prob-Interval)
-                              (-> Prob-Set Prob-Interval)))
+(: prob-set-self-join (case-> (-> Nonempty-Prob-Set (Values Nonempty-Prob-Interval Boolean))
+                              (-> Prob-Set (Values Prob-Interval Boolean))))
 (define (prob-set-self-join I)
-  (cond [(empty-prob-set? I)  empty-prob-set]
-        [(or (probs? I) (Plain-Prob-Interval? I))  I]
+  (cond [(empty-prob-set? I)  (values empty-prob-set #t)]
+        [(or (probs? I) (Plain-Prob-Interval? I))  (values I #t)]
         [else
-         (define Is (Plain-Prob-Interval-List-elements I))
-         (for/fold ([I : Nonempty-Prob-Interval  (prob-interval-join (first Is) (second Is))])
-                   ([J  (in-list (rest (rest Is)))])
-           (prob-interval-join I J))]))
+         (define Is (Prob-Interval-List-elements I))
+         (define-values (I1 exact?) (prob-interval-join (first Is) (second Is)))
+         (for/fold ([I1 : Nonempty-Prob-Interval  I1]
+                    [exact? : Boolean  exact?])
+                   ([I2  (in-list (rest (rest Is)))])
+           (let-values ([(I1 e?)  (prob-interval-join I1 I2)])
+             (values I1 (and e? exact?))))]))

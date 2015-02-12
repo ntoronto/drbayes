@@ -29,12 +29,16 @@
      (define At (set-intersect A Xt))
      (define Af (set-intersect A Xf))
      (cond [(and (empty-set? At) (empty-set? Af))  empty-pre-mapping]
-           [(empty-set? Af)  (nonempty-pre-mapping trues  (λ (B) At))]
-           [(empty-set? At)  (nonempty-pre-mapping falses (λ (B) Af))]
-           [else   (define A (delay (set-join At Af)))
-                   (nonempty-pre-mapping bools (fun (λ (B) (cond [(trues? B)  At]
-                                                                 [(falses? B)  Af]
-                                                                 [else  (force A)]))))]))))
+           [(empty-set? Af)  (nonempty-pre-mapping trues  (λ (B) (values At #t)))]
+           [(empty-set? At)  (nonempty-pre-mapping falses (λ (B) (values Af #t)))]
+           [else   (define-values (A A-exact?) (set-join At Af))
+                   (nonempty-pre-mapping
+                    bools
+                    (fun (λ (B)
+                           (values (cond [(trues? B)  At]
+                                         [(falses? B)  Af]
+                                         [else  A])
+                                   #t))))]))))
 
 (: predicate/prim (-> Symbol (-> Value (U Bottom Boolean)) Nonempty-Set Nonempty-Set
                       (Values (-> Bot-Arrow) (-> Pre-Arrow))))

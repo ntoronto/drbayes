@@ -4,13 +4,15 @@
          racket/list
          racket/promise
          "types.rkt"
+         "parameters.rkt"
          "bottom.rkt"
          "prob-set.rkt"
          "bool-set.rkt"
          "store-index.rkt"
          "store.rkt"
          "../flonum.rkt"
-         "../untyped-utils.rkt")
+         "../untyped-utils.rkt"
+         "../utils.rkt")
 
 (provide (all-defined-out))
 
@@ -34,11 +36,49 @@
 (define-type Nonfull-Store-Set (U Plain-Store-Set Empty-Store-Set))
 (define-type Store-Set (U Plain-Store-Set Empty-Store-Set Full-Store-Set))
 
-(: store-set (-> Prob-Set Bool-Set Store-Set Store-Set Store-Set))
-(define (store-set X B L R)
-  (if (or (empty-prob-set? X) (empty-bool-set? B) (empty-store-set? L) (empty-store-set? R))
-      empty-store-set
+(: plain-store-set-hash (HashTable Nonempty-Prob-Set
+                                   (HashTable Nonempty-Bool-Set
+                                              (HashTable Nonempty-Store-Set
+                                                         (HashTable Nonempty-Store-Set
+                                                                    (Weak-Boxof Plain-Store-Set))))))
+(define plain-store-set-hash (make-weak-hasheq))
+
+(: plain-store-set (-> Nonempty-Prob-Set
+                       Nonempty-Bool-Set
+                       Nonempty-Store-Set
+                       Nonempty-Store-Set
+                       Plain-Store-Set))
+(define (plain-store-set X B L R)
+  (if set-ensure-unique?
+      (let* ([h  plain-store-set-hash]
+             [h  (hash-ref! h X (inst make-hasheq
+                                      Nonempty-Bool-Set
+                                      (HashTable Nonempty-Store-Set
+                                                 (HashTable Nonempty-Store-Set
+                                                            (Weak-Boxof Plain-Store-Set)))))]
+             [h  (hash-ref! h B (inst make-weak-hasheq
+                                      Nonempty-Store-Set
+                                      (HashTable Nonempty-Store-Set
+                                                 (Weak-Boxof Plain-Store-Set))))]
+             [h  (hash-ref! h L (inst make-weak-hasheq
+                                      Nonempty-Store-Set
+                                      (Weak-Boxof Plain-Store-Set)))])
+        (weak-value-hash-ref! h R (λ () (Plain-Store-Set X B L R))))
       (Plain-Store-Set X B L R)))
+
+(: store-set (case-> (-> Nonempty-Prob-Set
+                         Nonempty-Bool-Set
+                         Nonempty-Store-Set
+                         Nonempty-Store-Set
+                         Nonempty-Store-Set)
+                     (-> Prob-Set Bool-Set Store-Set Store-Set Store-Set)))
+(define (store-set X B L R)
+  (cond [(or (empty-prob-set? X) (empty-bool-set? B) (empty-store-set? L) (empty-store-set? R))
+         empty-store-set]
+        [(and (probs? X) (bools? B) (stores? L) (stores? R))
+         stores]
+        [else
+         (plain-store-set X B L R)]))
 
 ;; ===================================================================================================
 ;; Simple projections
@@ -192,7 +232,8 @@
   (cond [(stores? S1)  S2]
         [(stores? S2)  S1]
         [(eq? S1 S2)  S1]
-        [(or (empty-store-set? S1) (empty-store-set? S2))  empty-store-set]
+        [(empty-store-set? S1)  S1]
+        [(empty-store-set? S2)  S2]
         [else
          (match-define (Plain-Store-Set X1 B1 L1 R1) S1)
          (match-define (Plain-Store-Set X2 B2 L2 R2) S2)
@@ -210,29 +251,41 @@
                                  empty-store-set
                                  (cond [(and (eq? X X1) (eq? B B1) (eq? L L1) (eq? R R1))  S1]
                                        [(and (eq? X X2) (eq? B B2) (eq? L L2) (eq? R R2))  S2]
-                                       [else  (Plain-Store-Set X B L R)])))))))))]))
+                                       [else  (plain-store-set X B L R)])))))))))]))
 
 ;; ===================================================================================================
 ;; Join
 
-(: store-set-join (case-> (-> Store-Set Nonempty-Store-Set Nonempty-Store-Set)
-                          (-> Nonempty-Store-Set Store-Set Nonempty-Store-Set)
-                          (-> Store-Set Store-Set Store-Set)))
+(: store-set-join (case-> (-> Store-Set Nonempty-Store-Set (Values Nonempty-Store-Set Boolean))
+                          (-> Nonempty-Store-Set Store-Set (Values Nonempty-Store-Set Boolean))
+                          (-> Store-Set Store-Set (Values Store-Set Boolean))))
 (define (store-set-join S1 S2)
-  (cond [(empty-store-set? S1)  S2]
-        [(empty-store-set? S2)  S1]
-        [(eq? S1 S2)  S1]
-        [(or (stores? S1) (stores? S2))  stores]
-        [else
-         (match-define (Plain-Store-Set X1 B1 L1 R1) S1)
-         (match-define (Plain-Store-Set X2 B2 L2 R2) S2)
-         (define X (prob-set-join X1 X2))
-         (define B (bool-set-union B1 B2))
-         (define L (store-set-join L1 L2))
-         (define R (store-set-join R1 R2))
-         (cond [(and (eq? X X1) (eq? B B1) (eq? L L1) (eq? R R1))  S1]
-               [(and (eq? X X2) (eq? B B2) (eq? L L2) (eq? R R2))  S2]
-               [else  (Plain-Store-Set X B L R)])]))
+  (cond
+    [(empty-store-set? S1)  (values S2 #t)]
+    [(empty-store-set? S2)  (values S1 #t)]
+    [(eq? S1 S2)  (values S1 #t)]
+    [(stores? S1)  (values S1 #t)]
+    [(stores? S2)  (values S2 #t)]
+    [else
+     (match-define (Plain-Store-Set X1 B1 L1 R1) S1)
+     (match-define (Plain-Store-Set X2 B2 L2 R2) S2)
+     (define-values (X x-exact?) (prob-set-join X1 X2))
+     (define-values (B b-exact?) (bool-set-join B1 B2))
+     (define-values (L l-exact?) (store-set-join L1 L2))
+     (define-values (R r-exact?) (store-set-join R1 R2))
+     (cond [(and (eq? X X1) (eq? B B1) (eq? L L1) (eq? R R1))  (values S1 #t)]
+           [(and (eq? X X2) (eq? B B2) (eq? L L2) (eq? R R2))  (values S2 #t)]
+           [else
+            (define x-eq? (eq? X1 X2))
+            (define b-eq? (eq? B1 B2))
+            (define l-eq? (eq? L1 L2))
+            (define r-eq? (eq? R1 R2))
+            (define exact?
+              (or (and x-exact? b-eq? l-eq? r-eq?)
+                  (and x-eq? b-exact? l-eq? r-eq?)
+                  (and x-eq? b-eq? l-exact? r-eq?)
+                  (and x-eq? b-eq? l-eq? r-exact?)))
+            (values (plain-store-set X B L R) exact?)])]))
 
 ;; ===================================================================================================
 ;; Membership
@@ -291,7 +344,7 @@
 (: store-set-realize (-> Nonempty-Store-Set Store))
 ;; Sample each real axis, take infimum of each boolean axis
 (define (store-set-realize S)
-  (let loop ([S S] [j j0])
+  (let loop : Store ([S S] [j j0])
     (cond [(stores? S)  (stores-realize j)]
           [(Plain-Store-Set? S)
            (match-define (Plain-Store-Set X B L R) S)
@@ -307,8 +360,9 @@
 ;; ===================================================================================================
 ;; Measurement
 
-(: store-set-random-measure (-> Store-Set Prob))
-(define (store-set-random-measure S)
+(: make-store-set-random-measure (-> (-> Nonempty-Prob-Set Prob) (-> Prob Prob Prob)
+                                     (-> Store-Set Prob)))
+(define ((make-store-set-random-measure prob-set-measure prob*) S)
   (if (empty-store-set? S)
       prob-0
       (let loop ([S S])
@@ -317,6 +371,15 @@
             (match-let ([(Plain-Store-Set X B L R)  S])
               (prob* (prob-set-measure X)
                      (prob* (loop L) (loop R))))))))
+
+(define store-set-random-measure
+  (make-store-set-random-measure prob-set-measure prob*))
+
+(define store-set-random-measure/rndd
+  (make-store-set-random-measure prob-set-measure/rndd prob*/rndd))
+
+(define store-set-random-measure/rndu
+  (make-store-set-random-measure prob-set-measure/rndu prob*/rndu))
 
 ;; ===================================================================================================
 

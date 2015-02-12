@@ -18,26 +18,26 @@
 (define-type Nonempty-Bool-Set (U Plain-Bool-Set Full-Bool-Set))
 (define-type Bool-Set (U Plain-Bool-Set Empty-Bool-Set Full-Bool-Set))
 
-(: bool-set-member? (Bool-Set Boolean -> Boolean))
+(: bool-set-member? (-> Bool-Set Boolean Boolean))
 (define (bool-set-member? A x)
   (cond [(empty-bool-set? A)  #f]
         [(bools? A)  #t]
         [else  (eq? x (trues? A))]))
 
-(: bool-set-union (case-> (Bool-Set Nonempty-Bool-Set -> Nonempty-Bool-Set)
-                          (Nonempty-Bool-Set Bool-Set -> Nonempty-Bool-Set)
-                          (Bool-Set Bool-Set -> Bool-Set)))
-(define (bool-set-union A B)
-  (cond [(empty-bool-set? A)  B]
-        [(empty-bool-set? B)  A]
-        [(bools? A)  A]
-        [(bools? B)  B]
-        [(eq? A B)  A]
-        [else  bools]))
+(: bool-set-join (case-> (-> Bool-Set Nonempty-Bool-Set (Values Nonempty-Bool-Set #t))
+                         (-> Nonempty-Bool-Set Bool-Set (Values Nonempty-Bool-Set #t))
+                         (-> Bool-Set Bool-Set (Values Bool-Set #t))))
+(define (bool-set-join A B)
+  (cond [(empty-bool-set? A)  (values B #t)]
+        [(empty-bool-set? B)  (values A #t)]
+        [(bools? A)  (values A #t)]
+        [(bools? B)  (values B #t)]
+        [(eq? A B)  (values A #t)]
+        [else  (values bools #t)]))
 
-(: bool-set-intersect (case-> (Bool-Set Nonfull-Bool-Set -> Nonfull-Bool-Set)
-                              (Nonfull-Bool-Set Bool-Set -> Nonfull-Bool-Set)
-                              (Bool-Set Bool-Set -> Bool-Set)))
+(: bool-set-intersect (case-> (-> Bool-Set Nonfull-Bool-Set Nonfull-Bool-Set)
+                              (-> Nonfull-Bool-Set Bool-Set Nonfull-Bool-Set)
+                              (-> Bool-Set Bool-Set Bool-Set)))
 (define (bool-set-intersect A B)
   (cond [(bools? A)  B]
         [(bools? B)  A]
@@ -46,20 +46,10 @@
         [(eq? A B)  A]
         [else  empty-bool-set]))
 
-(: bool-set-complement (case-> (Plain-Bool-Set -> Plain-Bool-Set)
-                               (Nonempty-Bool-Set -> Nonfull-Bool-Set)
-                               (Nonfull-Bool-Set -> Nonempty-Bool-Set)
-                               (Bool-Set -> Bool-Set)))
-(define (bool-set-complement A)
-  (cond [(empty-bool-set? A)  bools]
-        [(bools? A)  empty-bool-set]
-        [(falses? A)  trues]
-        [else   falses]))
-
-(: bool-set-subtract (case-> (Full-Bool-Set Plain-Bool-Set -> Plain-Bool-Set)
-                             (Full-Bool-Set Nonfull-Bool-Set -> Nonempty-Bool-Set)
-                             (Bool-Set Nonempty-Bool-Set -> Nonfull-Bool-Set)
-                             (Bool-Set Bool-Set -> Bool-Set)))
+(: bool-set-subtract (case-> (-> Full-Bool-Set Plain-Bool-Set Plain-Bool-Set)
+                             (-> Full-Bool-Set Nonfull-Bool-Set Nonempty-Bool-Set)
+                             (-> Bool-Set Nonempty-Bool-Set Nonfull-Bool-Set)
+                             (-> Bool-Set Bool-Set Bool-Set)))
 (define (bool-set-subtract A B)
   (cond [(empty-bool-set? B)  A]
         [(empty-bool-set? A)  A]
@@ -77,25 +67,25 @@
         [(bools? A)   #f]
         [else  (eq? A B)]))
 
-(: booleans->bool-set (case-> (#f #f -> Empty-Bool-Set)
-                              (#t Boolean -> Nonempty-Bool-Set)
-                              (Boolean #t -> Nonempty-Bool-Set)
-                              (Boolean Boolean -> Bool-Set)))
+(: booleans->bool-set (case-> (-> #f #f Empty-Bool-Set)
+                              (-> #t Boolean Nonempty-Bool-Set)
+                              (-> Boolean #t Nonempty-Bool-Set)
+                              (-> Boolean Boolean Bool-Set)))
 (define (booleans->bool-set t? f?)
   (cond [t?    (if f? bools trues)]
         [else  (if f? falses empty-bool-set)]))
 
-(: bool-set->booleans (Bool-Set -> (Values Boolean Boolean)))
+(: bool-set->booleans (-> Bool-Set (Values Boolean Boolean)))
 (define (bool-set->booleans A)
   (cond [(empty-bool-set? A)  (values #f #f)]
         [(bools? A)   (values #t #t)]
         [(trues? A)   (values #t #f)]
         [else         (values #f #t)]))
 
-(: boolean->singleton (Boolean -> Plain-Bool-Set))
+(: boolean->singleton (-> Boolean Plain-Bool-Set))
 (define (boolean->singleton b)
   (if b trues falses))
 
-(: bool-set-singleton? (Bool-Set -> Boolean))
+(: bool-set-singleton? (-> Bool-Set Boolean))
 (define (bool-set-singleton? A)
   (or (trues? A) (falses? A)))

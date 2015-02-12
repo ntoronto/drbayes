@@ -9,7 +9,8 @@
 (define js
   (list j0
         (left j0) (right j0)
-        (left (left j0)) (left (right j0)) (right (left j0)) (right (right j0))))
+        (left (left j0)) (left (right j0)) (right (left j0)) (right (right j0))
+        ))
 
 (: random-store (-> Store-Set Store))
 (define (random-store S)

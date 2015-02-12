@@ -2,26 +2,31 @@
 
 (require racket/match
          racket/list
-         "../set.rkt"
-         "../flonum.rkt")
+         "../../set.rkt"
+         "../../flonum.rkt")
 
 (provide (all-defined-out))
 
 ;; ===================================================================================================
 ;; Image computation for monotone R -> R functions
 
-(: monotone-apply (-> (-> Nonempty-Real-Interval Real-Set) Set Set))
+(: monotone-apply (-> (-> Nonempty-Real-Interval (Values Real-Set Boolean)) Set
+                      (Values Set Boolean)))
 (define (monotone-apply f A)
-  (define B (real-set-map f (set-take-reals A)))
-  (if (empty-real-set? B) empty-set B))
+  (define-values (B B-exact?) (real-set-map f (set-take-reals A)))
+  (values (if (empty-real-set? B) empty-set B)
+          B-exact?))
 
-(: strictly-monotone-image (-> Boolean (-> Flonum Flonum) (-> Flonum Flonum) Set Set))
+(: strictly-monotone-image (-> Boolean (-> Flonum Flonum) (-> Flonum Flonum) Set
+                               (Values Set Boolean)))
 (define (strictly-monotone-image inc? f/rndd f/rndu A)
-  (monotone-apply (λ (A)
-                    (define-values (a1 a2 a1? a2?) (real-interval-fields A))
-                    (cond [inc?  (real-interval (f/rndd a1) (f/rndu a2) a1? a2?)]
-                          [else  (real-interval (f/rndd a2) (f/rndu a1) a2? a1?)]))
-                  A))
+  (monotone-apply
+   (λ (A)
+     (define-values (a1 a2 a1? a2?) (real-interval-fields A))
+     (values (cond [inc?  (real-interval (f/rndd a1) (f/rndu a2) a1? a2?)]
+                   [else  (real-interval (f/rndd a2) (f/rndu a1) a2? a1?)])
+             #t))
+   A))
 
 ;; ===================================================================================================
 ;; Bijections (invertible functions and their inverses)
@@ -40,17 +45,22 @@
   (match-define (bijection inc? X Y fb/rndd fb/rndu fa/rndd fa/rndu) f)
   (bijection inc? Y X fa/rndd fa/rndu fb/rndd fb/rndu))
 
-(: bijection-image (-> bijection (-> Set Set)))
+(: bijection-image (-> bijection (-> Set (Values Set Boolean))))
 (define (bijection-image f)
   (match-define (bijection inc? X Y fb/rndd fb/rndu _ _) f)
-  (λ (A) (set-intersect Y (strictly-monotone-image inc? fb/rndd fb/rndu (set-intersect A X)))))
+  (λ (A)
+    (define-values (B B-exact?) (strictly-monotone-image inc? fb/rndd fb/rndu (set-intersect A X)))
+    (values (set-intersect Y B) B-exact?)))
 
-(: bijection-preimage (-> bijection (-> Set (-> Set Set))))
+(: bijection-preimage (-> bijection (-> Set (-> Set (Values Set Boolean)))))
 (define (bijection-preimage f)
   (match-define (bijection inc? X Y _ _ fa/rndd fa/rndu) f)
   (λ (A)
     (let ([A  (set-intersect A X)])
-      (λ (B) (set-intersect A (strictly-monotone-image inc? fa/rndd fa/rndu (set-intersect B Y)))))))
+      (λ (B)
+        (define-values (C C-exact?)
+          (strictly-monotone-image inc? fa/rndd fa/rndu (set-intersect B Y)))
+        (values (set-intersect A C) C-exact?)))))
 
 ;; ===================================================================================================
 ;; Some bijections
@@ -76,7 +86,7 @@
 (define bij-log (bijection-inverse bij-exp))
 
 (define bij-expm1
-  (bijection #t reals (Plain-Real-Interval -1.0 +inf.0 #f #f)
+  (bijection #t reals (plain-real-interval -1.0 +inf.0 #f #f)
              flexpm1/rndd flexpm1/rndu
              fllog1p/rndd fllog1p/rndu))
 
@@ -106,8 +116,8 @@
 
 (define bij-asin
   (bijection #t
-             (Plain-Real-Interval -1.0 1.0 #t #t)
-             (Plain-Real-Interval (* 0.5 -pi/rndd) (* 0.5 +pi/rndu) #t #t)
+             (plain-real-interval -1.0 1.0 #t #t)
+             (plain-real-interval (* 0.5 -pi/rndd) (* 0.5 +pi/rndu) #t #t)
              flasin/rndd flasin/rndu
              flsin/rndd  flsin/rndu))
 
@@ -115,8 +125,8 @@
 
 (define bij-acos
   (bijection #f
-             (Plain-Real-Interval -1.0 1.0 #t #t)
-             (Plain-Real-Interval 0.0 +pi/rndu #t #t)
+             (plain-real-interval -1.0 1.0 #t #t)
+             (plain-real-interval 0.0 +pi/rndu #t #t)
              flacos/rndd flacos/rndu
              flcos/rndd  flcos/rndu))
 

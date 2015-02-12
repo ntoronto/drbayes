@@ -2,11 +2,16 @@
 
 (require (for-syntax racket/base
                      racket/syntax)
-         racket/list)
+         racket/list
+         racket/promise)
 
 (provide (all-defined-out))
 
 (define-type (Maybe-Promise T) (U T (Promise T)))
+
+(define-syntax-rule (maybe-force e)
+  (let ([x e])
+    (if (promise? x) (force x) x)))
 
 (define-type (Listof+1 A) (Pair A (Listof A)))
 (define-type (Listof+2 A) (Pair A (Pair A (Listof A))))
@@ -43,3 +48,15 @@
 
 (: hasheq2 (All (A B) (A B A B -> (HashTable A B))))
 (define (hasheq2 k1 v1 k2 v2) (make-immutable-hasheq (list (cons k1 v1) (cons k2 v2))))
+
+(: weak-value-hash-ref! (All (K V) (-> (HashTable K (Weak-Boxof V)) K (-> V) V)))
+(define (weak-value-hash-ref! h k v)
+  (define w (hash-ref h k #f))
+  (cond [w  (define v* (weak-box-value w))
+            (if v* v* (let ([v  (v)])
+                        (hash-set! h k (make-weak-box v))
+                        v))]
+        [else
+         (let ([v  (v)])
+           (hash-set! h k (make-weak-box v))
+           v)]))

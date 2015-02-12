@@ -2,8 +2,6 @@
 
 (require drbayes)
 
-(drbayes-search-prob-min 0.0)
-
 (define/drbayes (e1)
   (if (< 0.5 (random)) 1 (fail)))
 
@@ -23,11 +21,11 @@
 
 (: do-test (-> meaning Any))
 (define (do-test e)
-  (for*/list : (Listof Any) ([s?  '(#t #;#f)]
-                             [p  '(#i1 #i1/2 #i1/4 #i1/8 #i1/16)])
+  (for*/list : (Listof Any) ([s?  '(#t #f)]
+                             [p : Natural  '(0 1 2 3 4)])
     (define-values (xs ws) 
       (parameterize ([drbayes-refinement-search?  s?]
-                     [drbayes-search-axis-prob-min  p])
+                     [drbayes-sample-max-splits  p])
         (drbayes-sample e 50)))
     (list s? p (length xs))))
 

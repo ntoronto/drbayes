@@ -10,10 +10,10 @@
 
 (drbayes-refinement-search? #t)
 (drbayes-refinement-sample? #t)
-(drbayes-sample-axis-prob-min 1.0)
+(drbayes-sample-max-splits 0)
 
 
-(define n 50000)
+(define n 1000)
 
 (define/drbayes (vec+ lst1 lst2)
   (list (+ (list-ref lst1 0) (list-ref lst2 0))

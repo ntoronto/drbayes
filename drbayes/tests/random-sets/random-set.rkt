@@ -117,7 +117,13 @@
            (if ((random) . < . p) (list (Bot-Tagged b-tag (random-nonempty-set))) empty))))
   (if (or (empty? As) (empty? (rest As)))
       (random-bot-union)
-      (apply bot-union As)))
+      (let-values ([(B _)  (set-join (first As) (second As))])
+        (assert
+         (for/fold ([B : Nonempty-Set  B])
+                   ([A  (in-list (rest (rest As)))])
+           (let-values ([(B _)  (set-join B A)])
+             B))
+         bot-union?))))
 
 (: random-top-union (-> Top-Union))
 (define (random-top-union)
@@ -133,7 +139,11 @@
            (if ((random) . < . p) (list (Top-Tagged b-tag (random-nonfull-set))) empty))))
   (if (or (empty? As) (empty? (rest As)))
       (random-top-union)
-      (apply top-union As)))
+      (assert
+       (for/fold ([B : Nonfull-Set  (set-intersect (first As) (second As))])
+                 ([A  (in-list (rest (rest As)))])
+         (set-intersect B A))
+       top-union?)))
 
 (: set-depth (Parameterof Natural))
 (define set-depth (make-parameter 0))

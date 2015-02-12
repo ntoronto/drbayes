@@ -4,11 +4,12 @@
          (only-in racket/math pi)
          "../../set.rkt"
          "../../flonum.rkt"
-         "../../real.rkt"
          "../types.rkt"
          "../pure-arrows.rkt"
          "predicate-lifts.rkt"
-         "make-real-lift.rkt")
+         "make-real-lift.rkt"
+         "bijection.rkt"
+         "trijection.rkt")
 
 (provide (all-defined-out))
 

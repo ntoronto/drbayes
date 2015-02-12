@@ -2,6 +2,7 @@
 
 (require drbayes/private/set
          "../random-sets/random-store-set.rkt"
+         "../test-utils.rkt"
          "set-properties.rkt")
 
 (printf "starting...~n")
@@ -12,7 +13,7 @@
     equal?
     store-set-subseteq?
     store-set-join
-    store-set-intersect
+    ((inst intersect->meet Store-Set) store-set-intersect)
     empty-store-set
     stores
     random-store-set)
@@ -21,6 +22,6 @@
     store-set-member?
     store-set-subseteq?
     store-set-join
-    store-set-intersect
+    ((inst intersect->meet Store-Set) store-set-intersect)
     random-store-set
     random-store)))

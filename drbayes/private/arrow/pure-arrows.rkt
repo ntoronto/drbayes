@@ -11,15 +11,31 @@
 
 (provide (all-defined-out))
 
+(: exact-pre-mapping-fun (-> (-> Nonempty-Set Set) (-> Nonempty-Set (Values Set #t))))
+(define ((exact-pre-mapping-fun f) B)
+  (values (f B) #t))
+
 (: run/bot (case-> (Bot-Arrow Bottom -> Bottom)
                    (Bot-Arrow Maybe-Value -> Maybe-Value)))
 (define (run/bot f a)
   (if (bottom? a) a (f a)))
 
-(: run/pre (case-> (Pre-Arrow Empty-Set -> Empty-Pre-Mapping)
-                   (Pre-Arrow Set -> Pre-Mapping)))
-(define (run/pre h A)
-  (if (empty-set? A) empty-pre-mapping (h A)))
+(: run/pre (case-> (-> Pre-Arrow Empty-Set Empty-Pre-Mapping)
+                   (-> Pre-Arrow Set Pre-Mapping)
+                   (-> Pre-Arrow Empty-Set Boolean Empty-Pre-Mapping)
+                   (-> Pre-Arrow Set Boolean Pre-Mapping)))
+(define (run/pre h A [exact? #t])
+  (if (empty-set? A)
+      empty-pre-mapping
+      (if exact?
+          (h A)
+          (let ([h  (h A)])
+            (cond [(empty-pre-mapping? h)  empty-pre-mapping]
+                  [else  (match-define (nonempty-pre-mapping Y p) h)
+                         (nonempty-pre-mapping
+                          Y (λ (B)
+                              (define-values (A _) (p B))
+                              (values A #f)))])))))
 
 ;; ===================================================================================================
 ;; Basic computable lifts
@@ -42,7 +58,7 @@
 (: id/pre (-> Pre-Arrow))
 
 (define ((id/bot) a) a)
-(define (id/pre) (make-pre-arrow/memo (λ (A) (nonempty-pre-mapping A (λ (B) B)))))
+(define (id/pre) (make-pre-arrow/memo (λ (A) (nonempty-pre-mapping A (λ (B) (values B #t))))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Domain restriction
@@ -54,7 +70,7 @@
   (if (set-member? X a) a (bottom (delay (format "restrict: expected value in ~e; given ~e" X a)))))
 
 (define (restrict/pre X)
-  (make-pre-arrow/memo (λ (A) (pre-mapping (set-intersect A X) (λ (B) B)))))
+  (make-pre-arrow/memo (λ (A) (pre-mapping (set-intersect A X) (λ (B) (values B #t))))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Constant functions
@@ -65,7 +81,7 @@
 (define ((const/bot b) a) b)
 (define (const/pre b)
   (define B (value->singleton b))
-  (make-pre-arrow/memo (λ (A) (nonempty-pre-mapping B (λ (B) A)))))
+  (make-pre-arrow/memo (λ (A) (nonempty-pre-mapping B (λ (B) (values A #t))))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Pair projections
@@ -77,8 +93,12 @@
 
 (define (fst/bot) value-fst)
 (define (snd/bot) value-snd)
-(define (fst/pre) (make-pre-arrow/memo (λ (A) (pre-mapping (set-fst A) (set-unfst A)))))
-(define (snd/pre) (make-pre-arrow/memo (λ (A) (pre-mapping (set-snd A) (set-unsnd A)))))
+(define (fst/pre) (make-pre-arrow/memo (λ (A) (pre-mapping
+                                               (set-fst A)
+                                               (exact-pre-mapping-fun (set-unfst A))))))
+(define (snd/pre) (make-pre-arrow/memo (λ (A) (pre-mapping
+                                               (set-snd A)
+                                               (exact-pre-mapping-fun (set-unsnd A))))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; List projections
@@ -87,7 +107,9 @@
 (: list-ref/pre (-> Natural Pre-Arrow))
 
 (define ((list-ref/bot n) a) (value-list-ref a n))
-(define (list-ref/pre n) (make-pre-arrow/memo (λ (A) (pre-mapping (set-proj A n) (set-unproj A n)))))
+(define (list-ref/pre n) (make-pre-arrow/memo (λ (A) (pre-mapping
+                                                      (set-proj A n)
+                                                      (exact-pre-mapping-fun (set-unproj A n))))))
 
 ;; ===================================================================================================
 ;; Arrow combinators (except the uncomputable `arr')
@@ -147,10 +169,12 @@
   (define uplus/pre (make-uplus/pre))
   (make-pre-arrow/memo
    (λ (A)
-     (let* ([h1  (run/pre h1 A)]
-            [h2  (run/pre h2 (preimage/pre h1 trues))]
-            [h3  (run/pre h3 (preimage/pre h1 falses))])
-       (uplus/pre h2 h3)))))
+     (let*-values ([(h1)  (run/pre h1 A)]
+                   [(At At-exact?)  (preimage/pre h1 trues)]
+                   [(Af Af-exact?)  (preimage/pre h1 falses)]
+                   [(h2)  (run/pre h2 At)]
+                   [(h3)  (run/pre h3 Af)])
+       (uplus/pre At-exact? Af-exact? h2 h3)))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Laziness
@@ -196,12 +220,22 @@
               (define C (set-intersect C1 Cb))
               (define Ct (set-intersect C trues))
               (define Cf (set-intersect C falses))
-              (define A2 (if (empty-set? Ct) empty-set (set-intersect (p1 Ct) (pb Ct))))
-              (define A3 (if (empty-set? Cf) empty-set (set-intersect (p1 Cf) (pb Cf))))
-              (cond [(eq? Cb bools)  (define A (set-join A2 A3))
-                                     (nonempty-pre-mapping universe (λ (B) A))]
-                    [(eq? Cb trues)   (run/pre h2 A2)]
-                    [(eq? Cb falses)  (run/pre h3 A3)]
+              (define-values (A2 A2-exact?)
+                (if (empty-set? Ct)
+                    (values empty-set #t)
+                    (let-values ([(A A-exact?)  (p1 Ct)]
+                                 [(B B-exact?)  (pb Ct)])
+                      (values (set-intersect A B) (and A-exact? B-exact?)))))
+              (define-values (A3 A3-exact?)
+                (if (empty-set? Cf)
+                    (values empty-set #t)
+                    (let-values ([(A A-exact?)  (p1 Cf)]
+                                 [(B B-exact?)  (pb Cf)])
+                      (values (set-intersect A B) (and A-exact? B-exact?)))))
+              (cond [(eq? Cb bools)  (define-values (A A-exact?) (set-join A2 A3))
+                                     (nonempty-pre-mapping universe (λ (B) (values A #f)))]
+                    [(eq? Cb trues)   (run/pre h2 A2 A2-exact?)]
+                    [(eq? Cb falses)  (run/pre h3 A3 A3-exact?)]
                     [else  empty-pre-mapping])])))))
 
 (: precise-ifte*/pre (-> Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow))
@@ -210,18 +244,23 @@
 (define (precise-ifte*/pre hb h1 h2 h3)
   (make-pre-arrow/memo
    (λ (A)
+     ;; Compute a preimage functon for the condition restricted to A
      (let ([h1  (run/pre h1 A)])
-       (define A2 (preimage/pre h1 trues))
-       (define A3 (preimage/pre h1 falses))
-       (define hb2 (run/pre hb A2))
-       (define hb3 (run/pre hb A3))
-       (let ([A2  (set-intersect A2 (preimage/pre hb2 trues))]
-             [A3  (set-intersect A3 (preimage/pre hb3 falses))])
+       ;; Compute the preimages of {true} and {false} restricted to A
+       (define-values (A2 A2-exact?) (preimage/pre h1 trues))
+       (define-values (A3 A3-exact?) (preimage/pre h1 falses))
+       ;; Compute preimage functions for the branch restricted to A2 and A3
+       (define hb2 (run/pre hb A2 A2-exact?))
+       (define hb3 (run/pre hb A3 A3-exact?))
+       (let*-values ([(At A2-exact?)  (preimage/pre hb2 trues)]
+                     [(A2)  (set-intersect A2 At)]
+                     [(Af A3-exact?)  (preimage/pre hb3 falses)]
+                     [(A3)  (set-intersect A3 Af)])
          (cond [(and (empty-set? A2) (empty-set? A3))  empty-pre-mapping]
-               [(empty-set? A3)  (run/pre h2 A2)]
-               [(empty-set? A2)  (run/pre h3 A3)]
-               [else  (define A (set-join A2 A3))
-                      (nonempty-pre-mapping universe (λ (B) A))]))))))
+               [(empty-set? A3)  (run/pre h2 A2 A2-exact?)]
+               [(empty-set? A2)  (run/pre h3 A3 A3-exact?)]
+               [else  (define-values (A A-exact?) (set-join A2 A3))
+                      (nonempty-pre-mapping universe (λ (B) (values A #f)))]))))))
 
 (: ifte*/pre (-> Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow Pre-Arrow))
 (define (ifte*/pre hb h1 h2 h3)
@@ -270,9 +309,10 @@
      (let ([S  (set-take-stores S)])
        (if (empty-store-set? S)
            empty-pre-mapping
-           (nonempty-pre-mapping (store-set-random S)
-                                 (fun (λ (X) (let ([S  (store-set-unrandom S (set-take-probs X))])
-                                               (if (empty-store-set? S) empty-set S))))))))))
+           (nonempty-pre-mapping
+            (store-set-random S)
+            (fun (λ (X) (let ([S  (store-set-unrandom S (set-take-probs X))])
+                          (values (if (empty-store-set? S) empty-set S) #t))))))))))
 
 (define (store-branch/pre)
   (define fun (make-pre-mapping-fun/memo))
@@ -281,9 +321,10 @@
      (let ([S  (set-take-stores S)])
        (if (empty-store-set? S)
            empty-pre-mapping
-           (nonempty-pre-mapping (store-set-branch S)
-                                 (fun (λ (B) (let ([S  (store-set-unbranch S (set-take-bools B))])
-                                               (if (empty-store-set? S) empty-set S))))))))))
+           (nonempty-pre-mapping
+            (store-set-branch S)
+            (fun (λ (B) (let ([S  (store-set-unbranch S (set-take-bools B))])
+                          (values (if (empty-store-set? S) empty-set S) #t))))))))))
 
 (define (store-left/pre)
   (define fun (make-pre-mapping-fun/memo))
@@ -292,9 +333,10 @@
      (let ([S  (set-take-stores S)])
        (if (empty-store-set? S)
            empty-pre-mapping
-           (nonempty-pre-mapping (store-set-left S)
-                                 (fun (λ (L) (let ([S  (store-set-unleft S (set-take-stores L))])
-                                               (if (empty-store-set? S) empty-set S))))))))))
+           (nonempty-pre-mapping
+            (store-set-left S)
+            (fun (λ (L) (let ([S  (store-set-unleft S (set-take-stores L))])
+                          (values (if (empty-store-set? S) empty-set S) #t))))))))))
 
 (define (store-right/pre)
   (define fun (make-pre-mapping-fun/memo))
@@ -303,9 +345,10 @@
      (let ([S  (set-take-stores S)])
        (if (empty-store-set? S)
            empty-pre-mapping
-           (nonempty-pre-mapping (store-set-right S)
-                                 (fun (λ (R) (let ([S  (store-set-unright S (set-take-stores R))])
-                                               (if (empty-store-set? S) empty-set S))))))))))
+           (nonempty-pre-mapping
+            (store-set-right S)
+            (fun (λ (R) (let ([S  (store-set-unright S (set-take-stores R))])
+                          (values (if (empty-store-set? S) empty-set S) #t))))))))))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Random boolean store projection
@@ -326,8 +369,8 @@
 (define (boolean-preimage orig-p)
   (define p (flonum->prob orig-p))
   (cond [(prob? p)
-         (values (Plain-Prob-Interval prob-0 p #t #f)
-                 (Plain-Prob-Interval p prob-1 #t #t))]
+         (values (plain-prob-interval prob-0 p #t #f)
+                 (plain-prob-interval p prob-1 #t #t))]
         [else
          (raise-argument-error 'boolean-preimage "Flonum in (0,1)" orig-p)]))
 
@@ -344,22 +387,25 @@
                   (let* ([X  (store-set-random S)]
                          [Xt  (prob-set-intersect Xt X)]
                          [Xf  (prob-set-intersect Xf X)])
-                    (cond [(and (empty-real-set? Xt) (empty-real-set? Xf))
+                    (cond [(and (empty-prob-set? Xt) (empty-prob-set? Xf))
                            empty-pre-mapping]
-                          [(empty-real-set? Xf)
+                          [(empty-prob-set? Xf)
                            (nonempty-pre-mapping
                             trues  (fun (λ (B) (let ([S  (store-set-unrandom S Xt)])
-                                                 (if (empty-store-set? S) empty-set S)))))]
-                          [(empty-real-set? Xt)
+                                                 (values (if (empty-store-set? S) empty-set S)
+                                                         #t)))))]
+                          [(empty-prob-set? Xt)
                            (nonempty-pre-mapping
                             falses (fun (λ (B) (let ([S  (store-set-unrandom S Xf)])
-                                                 (if (empty-store-set? S) empty-set S)))))]
+                                                 (values (if (empty-store-set? S) empty-set S)
+                                                         #t)))))]
                           [else
                            (nonempty-pre-mapping
                             bools  (fun (λ (B) (let* ([X  (cond [(eq? B trues)   Xt]
                                                                 [(eq? B falses)  Xf]
-                                                                [else  (prob-set-join Xt Xf)])]
+                                                                [else  (prob-set-union Xt Xf)])]
                                                       [S  (store-set-unrandom S X)])
-                                                 (if (empty-store-set? S) empty-set S)))))]))))))]
+                                                 (values (if (empty-store-set? S) empty-set S)
+                                                         #t)))))]))))))]
         [else
          (const/pre (p . >= . 1.0))]))

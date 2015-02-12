@@ -9,7 +9,7 @@
 
 (printf "starting...~n")
 
-(drbayes-refinement-search-splits 0)
+(drbayes-sample-max-splits 0)
 
 (define/drbayes (S)
   (if (boolean (const 0.5)) (T) (F)))

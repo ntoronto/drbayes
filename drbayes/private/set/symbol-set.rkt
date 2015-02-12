@@ -84,15 +84,17 @@
                  [(and (top-symbol-set? A) (bot-symbol-set? B))  (bot-top-union B A)]
                  [(and (top-symbol-set? A) (top-symbol-set? B))  (top-top-union A B)]))]))
 
-(: symbol-set-union (case-> (Symbol-Set Nonempty-Symbol-Set -> Nonempty-Symbol-Set)
-                            (Nonempty-Symbol-Set Symbol-Set -> Nonempty-Symbol-Set)
-                            (Symbol-Set Symbol-Set -> Symbol-Set)))
-(define (symbol-set-union A B)
-  (cond [(empty-symbol-set? A)  B]
-        [(empty-symbol-set? B)  A]
-        [(full-symbol-set? A)  A]
-        [(full-symbol-set? B)  B]
-        [else  (plain-symbol-set-union A B)]))
+(: symbol-set-join (case-> (Symbol-Set Nonempty-Symbol-Set -> (Values Nonempty-Symbol-Set #t))
+                           (Nonempty-Symbol-Set Symbol-Set -> (Values Nonempty-Symbol-Set #t))
+                           (Symbol-Set Symbol-Set -> (Values Symbol-Set #t))))
+(define (symbol-set-join A B)
+  (values
+   (cond [(empty-symbol-set? A)  B]
+         [(empty-symbol-set? B)  A]
+         [(full-symbol-set? A)  A]
+         [(full-symbol-set? B)  B]
+         [else  (plain-symbol-set-union A B)])
+   #t))
 
 (: bot-bot-union (bot-symbol-set bot-symbol-set -> bot-symbol-set))
 (define (bot-bot-union A B)

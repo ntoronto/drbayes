@@ -2,6 +2,7 @@
 
 (require drbayes/private/set/integer-set
          "../random-sets/random-integer-set.rkt"
+         "../test-utils.rkt"
          "set-properties.rkt")
 
 (printf "starting...~n")
@@ -12,7 +13,7 @@
     equal?
     integer-set-subseteq?
     integer-set-join
-    integer-set-intersect
+    ((inst intersect->meet Integer-Set) integer-set-intersect)
     empty-integer-set
     integers
     random-integer-set)
@@ -21,6 +22,6 @@
     integer-set-member?
     integer-set-subseteq?
     integer-set-join
-    integer-set-intersect
+    ((inst intersect->meet Integer-Set) integer-set-intersect)
     random-integer-set
     random-integer)))

@@ -12,7 +12,7 @@
                        racket/base
                        racket/list
                        racket/math)
-         (only-in typed/racket/base : assert -> case-> Any Promise)
+         (only-in typed/racket/base : assert -> case-> Any Promise let let*)
          racket/stxparam
          (for-syntax (only-in "functions.rkt" syntax-const))
          "functions.rkt"
@@ -24,6 +24,7 @@
 (provide define/drbayes struct/drbayes drbayes drbayes-run
          fail random store-uniform
          quote null empty
+         condition
          and or not
          car cdr real? null? pair? boolean?
          exp log expm1 log1p abs sqr sqrt acos asin
@@ -73,16 +74,36 @@
   (define-syntax-class primitive-transformer
     #:description "primitive syntax transformer"
     #:attributes (expression)
-    #:literals (and or not list uniform normal cauchy)
+    #:literals (condition
+                + - * /
+                < <= > >= =
+                and or not
+                list
+                uniform normal cauchy)
+    (pattern (condition a:expr b:expr) #:attr expression #'(strict-if b a (fail)))
+    ;; 0-ary operators
+    (pattern (+) #:attr expression #'0)
+    (pattern (*) #:attr expression #'1)
+    ;; Simple folding binary operators
+    (pattern ((~and op (~or + - * /)) e1 e2 e3 es ...)
+             #:attr expression #'(op (op e1 e2) e3 es ...))
+    ;; Conjunctive folding binary operators
+    (pattern ((~and op (~or < <= > >= =)) e1 e2 e3 es ...)
+             #:attr expression #'(let ([x e2]) (and (op e1 x) (op x e3 es ...))))
+    ;; Folding disjunction
     (pattern (or) #:attr expression #'#f)
     (pattern (or e:expr) #:attr expression #'e)
     (pattern (or e0:expr es:expr ...) #:attr expression #'(strict-if e0 #t (or es ...)))
+    ;; Folding conjunction
     (pattern (and) #:attr expression #'#t)
     (pattern (and e:expr) #:attr expression #'e)
     (pattern (and e0:expr es:expr ...) #:attr expression #'(strict-if e0 (and es ...) #f))
+    ;; Negation
     (pattern (not e:expr) #:attr expression #'(strict-if e #f #t))
+    ;; Lists
     (pattern (list) #:attr expression #'null)
     (pattern (list e0:expr es:expr ...) #:attr expression #'(cons e0 (list es ...)))
+    ;; Distributions
     (pattern (normal μ:expr σ:expr)
              #:attr expression #'(+ μ (* σ (normal-inv-cdf (store-uniform)))))
     (pattern (cauchy m:expr s:expr)
@@ -92,7 +113,7 @@
     )
   
   (define-syntax-class 0ary-primitive
-    #:description "zero-ary primitive operator"
+    #:description "zero-argument primitive operator"
     #:attributes (computation)
     #:literals (fail store-uniform random)
     (pattern fail #:attr computation #'(fail/arr))
@@ -101,7 +122,7 @@
     )
   
   (define-syntax-class 1ary-primitive
-    #:description "unary primitive operator"
+    #:description "one-argument primitive operator"
     #:attributes (computation)
     #:literals (+ - * /
                   car cdr real? null? pair? boolean?
@@ -145,7 +166,7 @@
     )
   
   (define-syntax-class 2ary-primitive
-    #:description "binary primitive operator"
+    #:description "two-argument primitive operator"
     #:attributes (computation)
     #:literals (+ - * / < <= > >= = equal?)
     (pattern + #:attr computation #'(+/arr))
@@ -161,16 +182,24 @@
     )
   
   (define-syntax-class n+1-ary-primitive
-    #:description "n+1-ary primitive operator"
+    #:description "n+1-argument primitive operator"
     #:literals (- /)
     (pattern (~or - /)))
   
+  (define-syntax-class n+2-ary-primitive
+    #:description "n+2-argument primitive operator"
+    #:literals (< <= > >= =)
+    (pattern (~or < <= > >= =)))
+
   (define-syntax-class bad-primitive-application
     #:description "bad primitive application"
     #:attributes (message)
     (pattern (e:n+1-ary-primitive args ...)
-             #:when (= 0 (length (syntax->list #'(args ...))))
+             #:when (< 1 (length (syntax->list #'(args ...))))
              #:attr message "expected 1 or more arguments")
+    (pattern (e:n+2-ary-primitive args ...)
+             #:when (< 2 (length (syntax->list #'(args ...))))
+             #:attr message "expected 2 or more arguments")
     (pattern (e:0ary-primitive args ...)
              #:when (not (= 0 (length (syntax->list #'(args ...)))))
              #:attr message "expected 0 arguments")
@@ -256,7 +285,11 @@
                                   strict-if strict-cond
                                   let let*
                                   list-ref scale translate boolean
-                                  tag? tag untag)
+                                  tag? tag untag
+                                  unquote)
+      [(_ (unquote e:expr))
+       (syntax/loc stx (meaning-arr e))]
+      
       [(_ e:constant)
        (syntax/loc stx e.expression)]
       
@@ -321,7 +354,7 @@
        (syntax/loc stx ((interp e) . >>>/arr . (translate/arr (assert (const x #'x) flonum?))))]
       
       [(_ (boolean p:real))
-       (syntax/loc stx (boolean/arr (const p #'p)))]
+       (syntax/loc stx (boolean/arr (assert (const p #'p) flonum?)))]
       
       [(_ (boolean ~! (const p:expr)))
        (syntax/loc stx (boolean/arr (assert (const p #'p) flonum?)))]
