@@ -36,12 +36,14 @@
 (define-type Nonfull-Store-Set (U Plain-Store-Set Empty-Store-Set))
 (define-type Store-Set (U Plain-Store-Set Empty-Store-Set Full-Store-Set))
 
+#|
 (: plain-store-set-hash (HashTable Nonempty-Prob-Set
                                    (HashTable Nonempty-Bool-Set
                                               (HashTable Nonempty-Store-Set
                                                          (HashTable Nonempty-Store-Set
                                                                     (Weak-Boxof Plain-Store-Set))))))
 (define plain-store-set-hash (make-weak-hasheq))
+|#
 
 (: plain-store-set (-> Nonempty-Prob-Set
                        Nonempty-Bool-Set
@@ -50,6 +52,8 @@
                        Plain-Store-Set))
 (define (plain-store-set X B L R)
   (if set-ensure-unique?
+      (error 'plain-store-set "set uniqueness unimplemented")
+      #|
       (let* ([h  plain-store-set-hash]
              [h  (hash-ref! h X (inst make-hasheq
                                       Nonempty-Bool-Set
@@ -64,6 +68,7 @@
                                       Nonempty-Store-Set
                                       (Weak-Boxof Plain-Store-Set)))])
         (weak-value-hash-ref! h R (λ () (Plain-Store-Set X B L R))))
+|#
       (Plain-Store-Set X B L R)))
 
 (: store-set (case-> (-> Nonempty-Prob-Set

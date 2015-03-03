@@ -8,6 +8,9 @@
 
 (printf "starting...~n")
 
+(check-absorption-exactness? #f)
+(check-exactness-commutativity? #f)
+
 (: random-pair-set (-> Pair-Set))
 (define (random-pair-set)
   (define r (random))

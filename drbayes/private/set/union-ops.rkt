@@ -22,18 +22,21 @@
 
 ;; ===================================================================================================
 ;; Pair sets
-
+#|
 (: plain-pair-set-hash (HashTable Nonempty-Set
                                   (HashTable Nonempty-Set
                                              (Weak-Boxof Plain-Pair-Set))))
 (define plain-pair-set-hash (make-weak-hasheq))
-
+|#
 (: plain-pair-set (-> Nonempty-Set Nonempty-Set Plain-Pair-Set))
 (define (plain-pair-set A1 A2)
   (if set-ensure-unique?
+      (error 'plain-pair-set "set uniqueness unimplemented")
+      #|
       (let* ([h  plain-pair-set-hash]
              [h  (hash-ref! h A1 (inst make-hasheq Nonempty-Set (Weak-Boxof Plain-Pair-Set)))])
         (weak-value-hash-ref! h A2 (λ () (Plain-Pair-Set A1 A2))))
+|#
       (Plain-Pair-Set A1 A2)))
 
 (: pair-set (case-> (-> Nonempty-Set Plain-Set Plain-Pair-Set)

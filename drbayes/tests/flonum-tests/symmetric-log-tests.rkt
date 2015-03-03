@@ -11,17 +11,20 @@
 (define -log2 (flonum->ordinal (fllog 0.5)))
 (define +log2 (flonum->ordinal (fllog 2.0)))
 
+(: random-flprob (-> Flonum))
 (define (random-flprob)
-  (cond [(< (random) 0.05)
-         (define r (random))
-         (cond [(< r #i1/5)  (flstep -inf.0 (random 10))]
-               [(< r #i2/5)  (flstep (fllog 0.5) (- (random 10)))]
-               [(< r #i3/5)  (flstep (fllog 2.0) (random 10))]
-               [(< r #i4/5)  (flstep +inf.0 (- (random 10)))]
-               [else         +nan.0])]
-        [(< (random) 0.5)  (flonum->flprob (random))]
-        [(< (random) 0.5)  (ordinal->flonum (random-integer -inf (+ 1 -log2)))]
-        [else              (ordinal->flonum (random-integer +log2 (+ 1 +inf)))]))
+  (define p
+    (cond [(< (random) 0.05)
+           (define r (random))
+           (cond [(< r #i1/5)  (flstep -inf.0 (random 10))]
+                 [(< r #i2/5)  (flstep (fllog 0.5) (- (random 10)))]
+                 [(< r #i3/5)  (flstep (fllog 2.0) (random 10))]
+                 [(< r #i4/5)  (flstep +inf.0 (- (random 10)))]
+                 [else         +nan.0])]
+          [(< (random) 0.5)  (flonum->flprob (random))]
+          [(< (random) 0.5)  (ordinal->flonum (random-integer -inf (+ 1 -log2)))]
+          [else              (ordinal->flonum (random-integer +log2 (+ 1 +inf)))]))
+  (if (flprob? p) p (random-flprob)))
 
 (: make-2d-error-fun (-> (-> Flonum Flonum Flonum)
                          (-> Bigfloat Bigfloat Bigfloat)

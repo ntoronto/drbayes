@@ -7,6 +7,9 @@
 
 (printf "starting...~n")
 
+(check-absorption-exactness? #f)
+(check-exactness-commutativity? #f)
+
 (time
  (for: ([_  (in-range 100000)])
    (check-bounded-lattice

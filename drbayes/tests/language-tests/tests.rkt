@@ -1,12 +1,15 @@
 #lang typed/racket
 
-(require plot
-         (except-in plot/utils sample)
-         math/distributions
-         math/statistics
-         math/flonum
-         math/base
-         drbayes
+(require drbayes
+         plot/typed
+         plot/typed/utils
+         (prefix-in
+          math.
+          (combine-in
+           math/distributions
+           math/statistics
+           math/flonum
+           math/base))
          "../test-utils.rkt"
          "normal-normal.rkt")
 
@@ -890,7 +893,7 @@
 (newline)
 
 (define rect-alpha (* 0.75 (rect-alpha-adjust)))
-(define value-alpha (alpha-clamp (/ 500.0 (fl num-samples))))
+(define value-alpha (alpha-clamp (/ 500.0 (math.fl num-samples))))
 
 (with-handlers ([exn?  (λ (_) (printf "***** preimage plot failed *****~n~n"))])
   (cond
@@ -925,5 +928,5 @@
         #:x-label "x"
         #:y-label "density"))
 
-(printf "E[x0] = ~v~n" (mean x0s ws))
-(printf "sd[x0] = ~v~n" (stddev x0s ws))
+(printf "E[x0] = ~v~n" (math.mean x0s ws))
+(printf "sd[x0] = ~v~n" (math.stddev x0s ws))

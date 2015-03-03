@@ -33,7 +33,7 @@
                    [Empty-Set   (format-id #'Name "Empty-~a-Set" #'Name)]
                    [empty-set   (format-id #'name "empty-~a-set" #'name)]
                    [empty-set?  (format-id #'name "empty-~a-set?" #'name)]
-                   [plain-interval-hash  (format-id #'Name "plain-~a-interval-hash" #'name)]
+                   ;[plain-interval-hash  (format-id #'Name "plain-~a-interval-hash" #'name)]
                    [plain-interval       (format-id #'Name "plain-~a-interval" #'name)]
                    [Plain-Interval       (format-id #'Name "Plain-~a-Interval" #'Name)]
                    [Plain-Interval?      (format-id #'Name "Plain-~a-Interval?" #'Name)]
@@ -49,7 +49,7 @@
                    [interval-intersect  (format-id #'name "~a-interval-intersect" #'name)]
                    [interval-subseteq?  (format-id #'name "~a-interval-subseteq?" #'name)]
                    [interval-member?  (format-id #'name "~a-interval-member?" #'name)]
-                   [interval-list-hash  (format-id #'Name "~a-interval-list-hash" #'name)]
+                   ;[interval-list-hash  (format-id #'Name "~a-interval-list-hash" #'name)]
                    [interval-list       (format-id #'Name "~a-interval-list" #'name)]
                    [Interval-List       (format-id #'Name "~a-Interval-List" #'Name)]
                    [Interval-List?      (format-id #'Name "~a-Interval-List?" #'Name)]
@@ -86,14 +86,15 @@
            (define-type Nonfull-Interval (U Plain-Interval Empty-Set))
            (define-type Interval (U Plain-Interval Full-Set Empty-Set))
            
-           (: plain-interval-hash (HashTable Plain-Interval (Weak-Boxof Plain-Interval)))
+           #;;(: plain-interval-hash (HashTable Plain-Interval (Weak-Boxof Plain-Interval)))
            (define plain-interval-hash (make-weak-hash))
            
            (: plain-interval (-> Value Value Boolean Boolean Plain-Interval))
            (define (plain-interval a b a? b?)
              (define I (Plain-Interval a b a? b?))
              (if set-ensure-unique?
-                 (weak-value-hash-ref! plain-interval-hash I (λ () I))
+                 (error 'plain-interval "set uniqueness unimplemented")
+                 #;(weak-value-hash-ref! plain-interval-hash I (λ () I))
                  I))
            
            (: interval (-> Value Value Boolean Boolean Interval))
@@ -207,14 +208,15 @@
              ([elements : (Listof+2 Plain-Interval)])
              #:transparent)
            
-           (: interval-list-hash (HashTable Interval-List (Weak-Boxof Interval-List)))
+           #;;(: interval-list-hash (HashTable Interval-List (Weak-Boxof Interval-List)))
            (define interval-list-hash (make-weak-hash))
            
            (: interval-list (-> (Listof+2 Plain-Interval) Interval-List))
            (define (interval-list Is)
              (define I (Interval-List Is))
              (if set-ensure-unique?
-                 (weak-value-hash-ref! interval-list-hash I (λ () I))
+                 (error 'interval-list "set uniqueness unimplemented")
+                 #;(weak-value-hash-ref! interval-list-hash I (λ () I))
                  I))
            
            (define-type Plain-Set (U Plain-Interval Interval-List))

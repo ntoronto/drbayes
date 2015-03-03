@@ -3,15 +3,16 @@
 (require racket/list
          racket/match
          (only-in typed/rackunit check-true)
-         plot
-         plot/utils
+         plot/typed
+         (only-in plot/typed/utils rect-join)
          math/flonum
          math/base
          math/statistics
          drbayes/private/set
          drbayes/private/flonum)
 
-(provide (all-defined-out)
+(provide (except-out (all-defined-out)
+                     alpha-expt)
          profile-thunk
          profile-expr)
 
