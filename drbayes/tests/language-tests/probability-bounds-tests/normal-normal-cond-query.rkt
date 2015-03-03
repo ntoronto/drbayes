@@ -24,7 +24,8 @@
     (let* ([x  (normal 0 1)]
            [y0  (normal x 1)])
       (cons (> x 0.5)
-            (< 0.9 y0 1.1)))))
+            (< 0.9 y0 1.1))))
+  )
 
 #;; Normal-normals model
 (begin
@@ -37,7 +38,8 @@
            [y1  (normal x 1)])
       (cons (> x 0.5)
             (and (< 0.9 y0 1.1)
-                 (< 1.3 y1 1.5))))))
+                 (< 1.3 y1 1.5)))))
+  )
 
 (define-values (p-min p-mid p-max)
   (drbayes-cond-query (drbayes (e))))

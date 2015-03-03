@@ -18,6 +18,39 @@
 
 (provide (all-defined-out))
 
+;; ===================================================================================================
+;; Store set utils
+
+(: store-set-fill-branches (case-> (-> Nonempty-Store-Set Nonempty-Store-Set)
+                                   (-> Store-Set Store-Set)))
+(define (store-set-fill-branches S)
+  (cond [(empty-store-set? S)  S]
+        [else
+         (let loop ([S S])
+           (cond [(stores? S)  S]
+                 [else
+                  (match-define (Plain-Store-Set X B L R) S)
+                  (store-set X bools (loop L) (loop R))]))]))
+
+(: store-set-join* (-> (Listof Store-Set) (Values Store-Set Boolean)))
+(define (store-set-join* Ss)
+  (cond [(empty? Ss)  (values empty-store-set #t)]
+        [(empty? (rest Ss))  (values (first Ss) #t)]
+        [else
+         (define m/2 (quotient (length Ss) 2))
+         (define-values (S1 S1-exact?) (store-set-join* (take Ss m/2)))
+         (define-values (S2 S2-exact?) (store-set-join* (drop Ss m/2)))
+         (define-values (S S-exact?) (store-set-join S1 S2))
+         (values S (and S-exact? S1-exact? S2-exact?))]))
+
+(: store-set-intersect* (-> (Listof+1 Store-Set) Store-Set))
+(define (store-set-intersect* Ss)
+  (cond [(empty? (rest Ss))  (first Ss)]
+        [else
+         (define m/2 (quotient (length Ss) 2))
+         (store-set-intersect (store-set-intersect* (assert (take Ss m/2) pair?))
+                              (store-set-intersect* (assert (drop Ss m/2) pair?)))]))
+
 (: store-index< (-> Store-Index Store-Index Boolean))
 (define (store-index< j0 j1)
   (cond [(empty? j1)  #f]
@@ -42,6 +75,9 @@
     (for/fold ([js : (Setof Store-Index)  (r.set)]) ([S  (in-list Ss)])
       (r.set-union js (r.list->set (store-set-random-indexes S)))))
    store-index<))
+
+;; ===================================================================================================
+;; Measuring unions of store sets
 
 (: plain-prob-set-endpoints (-> Plain-Prob-Set (Listof Prob)))
 (define (plain-prob-set-endpoints X)
@@ -85,129 +121,76 @@
                                      Ss))))
           (values S1s S2s)]))]))
 
-(: store-set-fill-branches (case-> (-> Nonempty-Store-Set Nonempty-Store-Set)
-                                   (-> Store-Set Store-Set)))
-(define (store-set-fill-branches S)
-  (cond [(empty-store-set? S)  S]
-        [else
-         (let loop ([S S])
-           (cond [(stores? S)  S]
-                 [else
-                  (match-define (Plain-Store-Set X B L R) S)
-                  (store-set X bools (loop L) (loop R))]))]))
+(: store-set-random-measure/rnd (-> Store-Set Boolean Prob))
+(define (store-set-random-measure/rnd S rndu?)
+  (cond [rndu?  (store-set-random-measure/rndu S)]
+        [else   (store-set-random-measure/rndd S)]))
 
-(: store-set-join* (-> (Listof Store-Set) (Values Store-Set Boolean)))
-(define (store-set-join* Ss)
-  (cond [(empty? Ss)  (values empty-store-set #t)]
-        [(empty? (rest Ss))  (values (first Ss) #t)]
-        [else
-         (define m/2 (quotient (length Ss) 2))
-         (define-values (S1 S1-exact?) (store-set-join* (take Ss m/2)))
-         (define-values (S2 S2-exact?) (store-set-join* (drop Ss m/2)))
-         (define-values (S S-exact?) (store-set-join S1 S2))
-         (values S (and S-exact? S1-exact? S2-exact?))]))
-#|
-(: store-set-list-intersect (-> (Listof Nonempty-Store-Set)
-                                (Listof Nonempty-Store-Set)
-                                (Listof Nonempty-Store-Set)))
-(define (store-set-list-intersect S0s S1s)
-  ;(printf "length S0s = ~v  length S1s = ~v~n" (length S0s) (length S1s))
-  (let loop ([S0s S0s] [S1s S1s])
-    (cond [(or (empty? S0s) (empty? S1s))  empty]
-          [(equal? S0s S1s)  S0s]
-          [(and (empty? (rest S0s)) (empty? (rest S1s)))
-           (define S (store-set-intersect (first S0s) (first S1s)))
-           (if (empty-store-set? S) empty (list S))]
-          [(empty-store-set? (store-set-intersect
-                              (let-values ([(S0 _)  (store-set-join* S0s)]) S0)
-                              (let-values ([(S1 _)  (store-set-join* S1s)]) S1)))
-           empty]
-          [else
-           (define m/2 (quotient (length S0s) 2))
-           (define n/2 (quotient (length S1s) 2))
-           (define S00s (take S0s m/2))
-           (define S01s (drop S0s m/2))
-           (define S10s (take S1s n/2))
-           (define S11s (drop S1s n/2))
-           (remove-duplicates
-            (append (loop S00s S10s)
-                    (loop S00s S11s)
-                    (loop S01s S10s)
-                    (loop S01s S11s)))])))
+(: prob+/rnd (-> Prob Prob Boolean (U Prob Bad-Prob)))
+(define (prob+/rnd p1 p2 rndu?)
+  (if rndu? (prob+/rndu p1 p2) (prob+/rndd p1 p2)))
 
-(: debug-store-set-list (Parameterof (Listof Nonempty-Store-Set)))
-(define debug-store-set-list (make-parameter empty))
+(: prob-/rnd (-> Prob Prob Boolean (U Prob Bad-Prob)))
+(define (prob-/rnd p1 p2 rndu?)
+  (if rndu? (prob-/rndu p1 p2) (prob-/rndd p1 p2)))
 
-(: old-store-set-list-random-measure/rnd (-> (Listof Nonempty-Store-Set) Boolean Prob))
-; m(S1 ∪ S2) = m(S1) + m(S2) - m(S1 ∩ S2)
-(define (old-store-set-list-random-measure/rnd Ss rndu?)
-  (let loop ([Ss  (remove-duplicates (map store-set-fill-branches Ss))]
-             [rndu? : Boolean  rndu?])
-    (let ([Ss  (remove-duplicates Ss)])
-      #;
-    (when (> (length Ss) 100)
-      (printf "length Ss = ~v  rndu? = ~v~n" (length Ss) rndu?))
-    (cond [(empty? Ss)  prob-0]
-          [(empty? (rest Ss))
-           (define S (first Ss))
-           (if rndu? 
-               (store-set-random-measure/rndu S)
-               (store-set-random-measure/rndd S))]
-          [else
-           (define m/2 (quotient (length Ss) 2))
-           (define S0s (take Ss m/2))
-           (define S1s (drop Ss m/2))
-           ;(define S2s (store-set-list-intersect S0s S1s))
-           (define q prob-0 #;(loop S2s (not rndu?)))
-           (define p0 (loop S0s rndu?))
-           (define p1 (loop S1s rndu?))
-           (let ([p0  (prob-min p0 p1)]
-                 [p1  (prob-max p0 p1)])
-             (let* ([p1  (if rndu? (prob-/rndu p1 q) (prob-/rndd p1 q))]
-                    [p1  (if (prob? p1) p1 prob-0)]
-                    [p  (if rndu? (prob+/rndu p0 p1) (prob+/rndd p0 p1))]
-                    [p  (if (prob? p) p prob-1)])
-               p))]))))
-|#
 (: store-set-list-random-measure/rnd (-> (Listof Nonempty-Store-Set) Boolean Prob))
 (define (store-set-list-random-measure/rnd Ss rndu?)
+  ;; The indexes of every non-full axis in any store set
   (define js (store-set-list-random-indexes Ss))
   (cond
     [(empty? js)  (if (empty? Ss) prob-0 prob-1)]
     [else
      (let loop ([Ss  (remove-duplicates (map store-set-fill-branches Ss))]
                 [js  js])
-       (cond [(empty? Ss)  prob-0]
-             [(empty? (rest Ss))  (store-set-random-measure (first Ss))]
-             [(empty? (rest (rest Ss)))
-              (define S1 (first Ss))
-              (define S2 (second Ss))
-              (define p1 (store-set-random-measure S1))
-              (define p2 (store-set-random-measure S2))
-              (define q (store-set-random-measure (store-set-intersect S1 S2)))
-              (define p (let ([p  (prob+ p1 p2)]) (if (prob? p) p prob-1)))
-              (let ([p  (prob- p q)])
-                (if (prob? p) p prob-0))]
-             [(empty? js)
-              (define-values (S S-exact?) (store-set-join* Ss))
-              (define p (store-set-random-measure S))
-              (define q
-                (for/fold ([q : Prob  prob-0]) ([S  (in-list Ss)])
-                  (let ([q  (prob+ q (store-set-random-measure S))])
-                    (if (prob? q) q prob-1))))
-              (printf "p = ~v  q = ~v~n" p q)
-              p]
-             [else
-              (define-values (S1s S2s) (store-set-list-cut Ss (first js)))
-              (cond [(and (empty? S1s) (empty? S2s))  prob-0]
-                    [(empty? S2s)  (loop S1s (rest js))]
-                    [(empty? S1s)  (loop S2s (rest js))]
-                    [else
-                     (define new-js (append (rest js) (list (first js))))
-                     (define p1 (loop S1s new-js))
-                     (define p2 (loop S2s new-js))
-                     (let ([p  (prob+ p1 p2)])
-                       (if (prob? p) p prob-1))])]))]))
+       (cond
+         ;; Case: no stores in the union
+         [(empty? Ss)  prob-0]
+         ;; Case: one store in the union
+         [(empty? (rest Ss))  (store-set-random-measure/rnd (first Ss) rndu?)]
+         ;; Case: two stores in the union
+         [(empty? (rest (rest Ss)))
+          ;; P(S1 ∪ S2) = P(S1) + P(S2) - P(S1 ∩ S2) (with rounding)
+          (define S1 (first Ss))
+          (define S2 (second Ss))
+          (define p1 (store-set-random-measure/rnd S1 rndu?))
+          (define p2 (store-set-random-measure/rnd S2 rndu?))
+          (define q (store-set-random-measure/rnd (store-set-intersect S1 S2) (not rndu?)))
+          (define p (let ([p  (prob+/rnd p1 p2 rndu?)]) (if (prob? p) p prob-1)))
+          (let ([p  (prob-/rnd p q rndu?)])
+            (if (prob? p) p prob-0))]
+         ;; Case: many stores in the union, but we've run out of indexes
+         [(empty? js)
+          ;; It seems like this could only happen if there are a lot of duplicates, and I haven't
+          ;; seen it in practice. Better do something sensible anyway...
+          (cond
+            [rndu?
+             ;; Overapproximate (possibly badly)
+             (define-values (S S-exact?) (store-set-join* Ss))
+             (store-set-random-measure/rndu S)]
+            [else
+             ;; Underapproximate (possibly badly)
+             (define S (store-set-intersect* Ss))
+             (store-set-random-measure/rndd S)])]
+         ;; Case: we can split the stores in half based on a projection
+         [else
+          (define-values (S1s S2s) (store-set-list-cut Ss (first js)))
+          (cond
+            ;; Case: this really shouldn't happen
+            [(and (empty? S1s) (empty? S2s))  prob-0]
+            ;; Case: one side is empty, so they all have the same projection at this index
+            ;; We can leave the index out of all future decisions
+            [(empty? S2s)  (loop S1s (rest js))]
+            [(empty? S1s)  (loop S2s (rest js))]
+            ;; Case: we discriminated!
+            [else
+             ;; This index may still be worthwhile, so sock it onto the end of the queue
+             (define new-js (append (rest js) (list (first js))))
+             ;; Measure both sides and add
+             (define p1 (loop S1s new-js))
+             (define p2 (loop S2s new-js))
+             (let ([p  (prob+/rnd p1 p2 rndu?)])
+               (if (prob? p) p prob-1))])]))]))
 
 (: store-set-list-random-measure/rndd (-> (Listof Nonempty-Store-Set) Prob))
 (define (store-set-list-random-measure/rndd Ss)
@@ -216,6 +199,8 @@
 (: store-set-list-random-measure/rndu (-> (Listof Nonempty-Store-Set) Prob))
 (define (store-set-list-random-measure/rndu Ss)
   (store-set-list-random-measure/rnd Ss #t))
+
+;; ===================================================================================================
 
 (: refinement-enumerate (-> Refiner Nonempty-Store-Set Indexes (Listof Nonempty-Store-Set)))
 (define (refinement-enumerate refine S idxs)
