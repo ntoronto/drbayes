@@ -6,7 +6,10 @@
                "typed-racket-lib"
                "typed-racket-more"
                "math-lib"
-               ))
+               "images-lib"
+               "plot-gui-lib"
+               "plot-lib"
+               "profile-lib"))
 
 (define build-deps '())
 
