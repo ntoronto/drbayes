@@ -4,7 +4,7 @@ This is a probabilistic programming language meant for Bayesian modeling, which 
 
 This is of course possible using rejection sampling for exponential cost, but Dr. Bayes is usually much more efficient. In particular, the positive-probability conditions may have arbitrarily small probability without affecting running time. For more information, see
 
-> Neil Toronto. [Trustworthy, Useful Languages for Probabilistic Modeling and Inference.](http://students.cs.byu.edu/~ntoronto/dissertation.pdf) Doctoral Dissertation, Brigham Young University, 2014 (to appear).
+> Neil Toronto. [Trustworthy, Useful Languages for Probabilistic Modeling and Inference.](http://www.cs.umd.edu/~ntoronto/papers/toronto-2014diss.pdf) Doctoral Dissertation, Brigham Young University, 2014 (to appear).
 
 Dr. Bayes is currently just a core calculus. In the next few months, I intend to put a pretty face on it, make it faster, and turn this repository into an installable Racket package.
 
