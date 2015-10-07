@@ -1,7 +1,9 @@
 #lang typed/racket/base
 
 (require racket/match
-         racket/list
+         (only-in racket/list
+                  first second rest last empty? empty take drop append*
+                  remove-duplicates)
          (prefix-in r. racket/set)
          math/statistics
          "../set.rkt"

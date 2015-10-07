@@ -1,7 +1,7 @@
 #lang typed/racket/base
 
 (require racket/match
-         racket/list
+         (only-in racket/list first second rest empty?)
          math/flonum
          "ordered-set.rkt"
          "../flonum.rkt"

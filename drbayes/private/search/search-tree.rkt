@@ -1,7 +1,7 @@
 #lang typed/racket/base
 
 (require racket/match
-         racket/list
+         (only-in racket/list empty)
          racket/promise
          "../flonum.rkt"
          "../utils.rkt"

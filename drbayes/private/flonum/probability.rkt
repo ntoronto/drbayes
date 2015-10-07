@@ -1,7 +1,7 @@
 #lang typed/racket/base
 
 (require racket/performance-hint
-         racket/list
+         (only-in racket/list first rest empty? make-list)
          math/flonum
          racket/promise
          "symmetric-log.rkt"
