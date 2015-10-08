@@ -1,7 +1,7 @@
 #lang typed/racket/base
 
 (require racket/match
-         racket/list
+         (only-in racket/list first rest empty? empty)
          racket/promise
          "types.rkt"
          "parameters.rkt"

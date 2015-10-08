@@ -1,6 +1,6 @@
 #lang typed/racket/base
 
-(require racket/list
+(require (only-in racket/list empty)
          racket/match
          racket/promise
          "bottom.rkt"

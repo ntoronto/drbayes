@@ -1,7 +1,7 @@
 #lang typed/racket/base
 
 (require (for-syntax racket/base)
-         racket/list
+         (only-in racket/list first empty)
          racket/match
          math/flonum
          math/private/utils

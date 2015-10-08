@@ -1,7 +1,6 @@
 #lang typed/racket/base
 
 (require (for-syntax racket/base)
-         racket/list
          "parameters.rkt"
          "types.rkt"
          "real-set.rkt"
