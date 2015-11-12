@@ -36,8 +36,8 @@
         [(= i 1)  (cons (first lst) (rest (rest lst)))]
         [else  (list* (first lst) (second lst) (remove-index (rest (rest lst)) (- i 2)))]))
 
-(: list-set (All (A) ((Listof A) Integer A -> (Listof A))))
-(define (list-set lst i x)
+#;(: list-set (All (A) ((Listof A) Integer A -> (Listof A))))
+#;(define (list-set lst i x)
   (append (take lst i) (cons x (drop lst (+ i 1)))))
 
 (: list-set/+2 (All (A) ((Listof+2 A) Integer A -> (Listof+2 A))))
